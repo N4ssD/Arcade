@@ -397,13 +397,13 @@ fn public_game(dir: &Path, g: &Obj) -> Value {
     let mut o = g.clone();
     let target = g.get("target").and_then(|x| x.as_str()).unwrap_or("");
     let exists = if is_uri(target) { true } else { Path::new(target).exists() };
-    let media = |field: &str, sub: &str, _kind: &str| -> Value {
+    let media = |field: &str, sub: &str, kind: &str| -> Value {
         let p = g.get(field).and_then(|x| x.as_str()).unwrap_or("");
         let f = file_name_of(p);
         if f.is_empty() || f.contains("..") {
             return Value::Null;
         }
-        match media_data_url(&dir.join(sub).join(&f)) {
+        match media_token(&dir.join(sub).join(&f), kind, &f) {
             Some(u) => json!(u),
             None => Value::Null,
         }
@@ -873,101 +873,137 @@ fn find_cover(name: &str, target: &str, query: &str, cdir: &Path) -> Result<Opti
     Ok(None)
 }
 
+// Extrait les icônes de plusieurs jeux avec UN SEUL appel PowerShell (le module d'icônes est compilé une fois, puis gardé en cache)
 #[cfg(windows)]
-fn extract_icon(dir: &Path, target: &str) -> Option<String> {
-    if is_uri(target) || !Path::new(target).is_file() {
-        return None;
+fn extract_icons(dir: &Path, targets: &[String]) -> Vec<Option<String>> {
+    let mut res: Vec<Option<String>> = vec![None; targets.len()];
+    if targets.is_empty() {
+        return res;
     }
     let idir = dir.join("icons");
     let _ = fs::create_dir_all(&idir);
     let script = dir.join("icon.ps1");
-    fs::write(&script, include_str!("icon.ps1")).ok()?;
+    let list = dir.join("icon-list.txt");
+    if fs::write(&script, include_str!("icon.ps1")).is_err() || fs::write(&list, targets.join("\n")).is_err() {
+        return res;
+    }
     let root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
     let ps = format!(r"{}\System32\WindowsPowerShell\v1.0\powershell.exe", root);
     let out = std::process::Command::new(ps)
         .args(["-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(&script)
-        .args(["-Target", target, "-IconsDir"])
+        .arg("-ListFile")
+        .arg(&list)
+        .arg("-IconsDir")
         .arg(&idir)
+        .arg("-CacheDll")
+        .arg(dir.join(format!("icons-{}.dll", VERSION)))
         .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
-    let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    if name.is_empty() || !idir.join(&name).is_file() {
-        return None;
+        .output();
+    if let Ok(o) = out {
+        let text = String::from_utf8_lossy(&o.stdout).to_string();
+        for (i, line) in text.lines().take(targets.len()).enumerate() {
+            let name = line.trim();
+            if !name.is_empty() && idir.join(name).is_file() {
+                res[i] = Some(idir.join(name).to_string_lossy().to_string());
+            }
+        }
     }
-    Some(idir.join(name).to_string_lossy().to_string())
+    let _ = fs::remove_file(&list);
+    res
 }
 
 #[cfg(not(windows))]
-fn extract_icon(_dir: &Path, _target: &str) -> Option<String> {
-    None
+fn extract_icons(_dir: &Path, targets: &[String]) -> Vec<Option<String>> {
+    vec![None; targets.len()]
 }
 
-// Extrait en arrière-plan les icônes des jeux qui n'en ont pas encore
+fn extract_icon(dir: &Path, target: &str) -> Option<String> {
+    if is_uri(target) || !Path::new(target).is_file() {
+        return None;
+    }
+    extract_icons(dir, &[target.to_string()]).into_iter().next().flatten()
+}
+
+static ICON_BUSY: AtomicBool = AtomicBool::new(false);
+
+// Extrait en arrière-plan les icônes des jeux qui n'en ont pas encore (un seul traitement à la fois, en lot)
 fn spawn_icon_jobs(app: tauri::AppHandle) {
+    if ICON_BUSY.swap(true, Ordering::SeqCst) {
+        return;
+    }
     std::thread::spawn(move || {
         let st = app.state::<App>();
-        let todo: Vec<(String, String)> = match st.db.lock() {
-            Ok(db) => db
-                .games
-                .iter()
-                .filter(|g| g.get("icon").map(|x| x.is_null()).unwrap_or(true) && !g.get("iconTried").and_then(|x| x.as_bool()).unwrap_or(false))
-                .map(|g| (gs(&Value::Object(g.clone()), "id"), gs(&Value::Object(g.clone()), "target")))
-                .collect(),
-            Err(_) => return,
-        };
-        for (id, target) in todo {
-            let ico = extract_icon(&st.dir, &target);
-            if let Ok(mut db) = st.db.lock() {
-                if let Some(i) = find_game(&db, &id) {
-                    db.games[i].insert("iconTried".into(), json!(true));
-                    if let Some(p) = ico {
-                        db.games[i].insert("icon".into(), json!(p));
+        loop {
+            let todo: Vec<(String, String)> = match st.db.lock() {
+                Ok(mut db) => {
+                    let mut v = vec![];
+                    let mut changed = false;
+                    for g in db.games.iter_mut() {
+                        let none = g.get("icon").map(|x| x.is_null()).unwrap_or(true);
+                        let tried = g.get("iconTried").and_then(|x| x.as_bool()).unwrap_or(false);
+                        if !none || tried {
+                            continue;
+                        }
+                        let id = g.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                        let target = g.get("target").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                        if is_uri(&target) || !Path::new(&target).is_file() {
+                            g.insert("iconTried".into(), json!(true));
+                            changed = true;
+                        } else {
+                            v.push((id, target));
+                        }
                     }
-                    save(&st.dir, &db);
-                    CHANGED.store(true, Ordering::Relaxed);
+                    if changed {
+                        save(&st.dir, &db);
+                    }
+                    v
                 }
+                Err(_) => break,
+            };
+            if todo.is_empty() {
+                break;
+            }
+            let targets: Vec<String> = todo.iter().map(|(_, t)| t.clone()).collect();
+            let icons = extract_icons(&st.dir, &targets);
+            if let Ok(mut db) = st.db.lock() {
+                for ((id, _), ico) in todo.iter().zip(icons) {
+                    if let Some(i) = find_game(&db, id) {
+                        db.games[i].insert("iconTried".into(), json!(true));
+                        if let Some(p) = ico {
+                            db.games[i].insert("icon".into(), json!(p));
+                        }
+                    }
+                }
+                save(&st.dir, &db);
+                CHANGED.store(true, Ordering::Relaxed);
             }
         }
+        ICON_BUSY.store(false, Ordering::SeqCst);
     });
 }
 
-// Image -> data URL (mise en cache) : évite de dépendre du protocole personnalisé de la fenêtre
-fn media_data_url(path: &Path) -> Option<String> {
-    use base64::Engine;
-    use std::collections::HashMap;
-    use std::sync::OnceLock;
-    static CACHE: OnceLock<Mutex<HashMap<String, (u64, String)>>> = OnceLock::new();
+// Jeton d'image envoyé à l'interface : « arc:cover/nom.jpg?empreinte ». L'image est lue à la demande (commande `image`, octets bruts).
+fn media_token(path: &Path, kind: &str, file: &str) -> Option<String> {
     let meta = fs::metadata(path).ok()?;
     if !meta.is_file() {
         return None;
     }
     let stamp = meta.len() ^ meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0).rotate_left(32);
-    let key = path.to_string_lossy().to_string();
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Ok(c) = cache.lock() {
-        if let Some((s, u)) = c.get(&key) {
-            if *s == stamp {
-                return Some(u.clone());
-            }
-        }
-    }
-    let bytes = fs::read(path).ok()?;
-    let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
-    let mime = match ext.as_str() {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        "gif" => "image/gif",
-        "bmp" => "image/bmp",
-        _ => return None,
+    Some(format!("arc:{}/{}?{}", kind, url_enc(file), stamp))
+}
+
+#[tauri::command]
+fn image(kind: String, name: String, state: tauri::State<'_, App>) -> Result<tauri::ipc::Response, String> {
+    let sub = match kind.as_str() {
+        "cover" => "covers",
+        "icon" => "icons",
+        _ => return Err("Image inconnue.".into()),
     };
-    let url = format!("data:{};base64,{}", mime, base64::engine::general_purpose::STANDARD.encode(bytes));
-    if let Ok(mut c) = cache.lock() {
-        c.insert(key, (stamp, url.clone()));
+    if name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..") {
+        return Err("Image inconnue.".into());
     }
-    Some(url)
+    fs::read(state.dir.join(sub).join(&name)).map(tauri::ipc::Response::new).map_err(|e| e.to_string())
 }
 
 fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, String> {
@@ -1394,54 +1430,32 @@ mod inst {
     use super::*;
     use std::process::Command;
 
-    const REG: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Arcade";
+    use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
-    fn ps(script: &str) -> String {
-        use base64::Engine;
-        let utf16: Vec<u8> = script.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
-        let enc = base64::engine::general_purpose::STANDARD.encode(utf16);
-        let root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
-        let exe = format!(r"{}\System32\WindowsPowerShell\v1.0\powershell.exe", root);
-        Command::new(exe)
-            .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", &enc])
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_default()
-    }
-
-    fn q(s: &str) -> String {
-        s.replace('\'', "''")
-    }
+    const REG: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Arcade";
 
     pub fn reg_read(name: &str) -> String {
-        let out = Command::new("reg").args(["query", REG, "/v", name]).creation_flags(CREATE_NO_WINDOW).output();
-        let text = match out {
-            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).to_string(),
-            _ => return String::new(),
-        };
-        for line in text.lines() {
-            if line.trim_start().starts_with(name) {
-                if let Some(p) = line.find("REG_SZ") {
-                    return line[p + 6..].trim().to_string();
-                }
-            }
-        }
-        String::new()
+        RegKey::predef(HKEY_CURRENT_USER).open_subkey(REG).ok().and_then(|k| k.get_value::<String, _>(name).ok()).unwrap_or_default()
     }
 
     fn reg_write(dir: &Path, exe: &Path) {
-        let set = |n: &str, t: &str, v: &str| {
-            let _ = Command::new("reg").args(["add", REG, "/v", n, "/t", t, "/d", v, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
-        };
-        set("DisplayName", "REG_SZ", "Arcade");
-        set("DisplayVersion", "REG_SZ", VERSION);
-        set("Publisher", "REG_SZ", "N4ssD");
-        set("InstallLocation", "REG_SZ", &dir.to_string_lossy());
-        set("DisplayIcon", "REG_SZ", &exe.to_string_lossy());
-        set("UninstallString", "REG_SZ", &format!("\"{}\" --uninstall", exe.to_string_lossy()));
-        set("NoModify", "REG_DWORD", "1");
-        set("NoRepair", "REG_DWORD", "1");
+        if let Ok((k, _)) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(REG) {
+            let sv = |n: &str, v: &str| {
+                let _ = k.set_value(n, &v.to_string());
+            };
+            sv("DisplayName", "Arcade");
+            sv("DisplayVersion", VERSION);
+            sv("Publisher", "N4ssD");
+            sv("InstallLocation", &dir.to_string_lossy());
+            sv("DisplayIcon", &exe.to_string_lossy());
+            sv("UninstallString", &format!("\"{}\" --uninstall", exe.to_string_lossy()));
+            let _ = k.set_value("NoModify", &1u32);
+            let _ = k.set_value("NoRepair", &1u32);
+        }
+    }
+
+    fn reg_delete() {
+        let _ = RegKey::predef(HKEY_CURRENT_USER).delete_subkey_all(REG);
     }
 
     pub fn installed_dir() -> Option<PathBuf> {
@@ -1454,6 +1468,11 @@ mod inst {
     }
 
     pub fn running_installed() -> bool {
+        static C: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *C.get_or_init(running_installed_uncached)
+    }
+
+    fn running_installed_uncached() -> bool {
         let me = match std::env::current_exe() {
             Ok(p) => p,
             Err(_) => return false,
@@ -1512,40 +1531,51 @@ mod inst {
         p.to_path_buf()
     }
 
+    // Arrête les Arcade.exe en cours (sauf nous-mêmes) pour pouvoir remplacer le fichier
     fn kill_others(exe: &Path) {
-        let me = std::process::id();
-        ps(&format!(
-            "Get-Process | Where-Object {{ $_.Path -ieq '{}' -and $_.Id -ne {} }} | Stop-Process -Force -ErrorAction SilentlyContinue",
-            q(&exe.to_string_lossy()),
-            me
-        ));
+        let name = exe.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Arcade.exe".into());
+        let _ = Command::new("taskkill")
+            .args(["/F", "/IM", &name, "/FI", &format!("PID ne {}", std::process::id())])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+
+    fn make_lnk(path: &Path, exe: &Path, dir: &Path, args: Option<&str>) {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        if let Ok(mut sl) = mslnk::ShellLink::new(exe) {
+            sl.set_working_dir(Some(dir.to_string_lossy().to_string()));
+            sl.set_icon_location(Some(exe.to_string_lossy().to_string()));
+            sl.set_name(Some("Arcade - lanceur de jeux".to_string()));
+            if let Some(a) = args {
+                sl.set_arguments(Some(a.to_string()));
+            }
+            let _ = sl.create_lnk(path);
+        }
+    }
+
+    fn programs_dir() -> PathBuf {
+        dirs::data_dir().unwrap_or_default().join(r"Microsoft\Windows\Start Menu\Programs")
     }
 
     fn make_shortcuts(dir: &Path, desktop: bool, start: bool) {
         let exe = dir.join("Arcade.exe");
-        let one = |folder: &str| {
-            format!(
-                "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('{}')+'\\Arcade.lnk');$s.TargetPath='{}';$s.WorkingDirectory='{}';$s.IconLocation='{},0';$s.Description='Arcade - lanceur de jeux';$s.Save();",
-                folder,
-                q(&exe.to_string_lossy()),
-                q(&dir.to_string_lossy()),
-                q(&exe.to_string_lossy())
-            )
-        };
-        let mut script = String::new();
         if desktop {
-            script += &one("Desktop");
+            if let Some(d) = dirs::desktop_dir() {
+                make_lnk(&d.join("Arcade.lnk"), &exe, dir, None);
+            }
         }
         if start {
-            script += &one("Programs");
-        }
-        if !script.is_empty() {
-            ps(&script);
+            make_lnk(&programs_dir().join("Arcade.lnk"), &exe, dir, None);
         }
     }
 
     fn remove_shortcuts() {
-        ps("foreach($k in 'Desktop','Programs'){$p=[Environment]::GetFolderPath($k)+'\\Arcade.lnk';if(Test-Path -LiteralPath $p){Remove-Item -LiteralPath $p -Force}}");
+        if let Some(d) = dirs::desktop_dir() {
+            let _ = fs::remove_file(d.join("Arcade.lnk"));
+        }
+        let _ = fs::remove_file(programs_dir().join("Arcade.lnk"));
     }
 
     pub fn install(dir: &Path, desktop: bool, start: bool) -> Result<(), String> {
@@ -1594,8 +1624,7 @@ mod inst {
     }
 
     fn startup_lnk() -> PathBuf {
-        let base = std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_default();
-        base.join(r"Microsoft\Windows\Start Menu\Programs\Startup\Arcade.lnk")
+        programs_dir().join("Startup").join("Arcade.lnk")
     }
 
     pub fn startup_enabled() -> bool {
@@ -1607,14 +1636,8 @@ mod inst {
         let lnk = startup_lnk();
         if on {
             if let Ok(exe) = std::env::current_exe() {
-                let dir = exe.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
-                ps(&format!(
-                    "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('{}');$s.TargetPath='{}';$s.Arguments='--background';$s.WorkingDirectory='{}';$s.IconLocation='{},0';$s.Save();",
-                    q(&lnk.to_string_lossy()),
-                    q(&exe.to_string_lossy()),
-                    q(&dir),
-                    q(&exe.to_string_lossy())
-                ));
+                let dir = exe.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+                make_lnk(&lnk, &exe, &dir, Some("--background"));
             }
         } else {
             let _ = fs::remove_file(&lnk);
@@ -1650,7 +1673,7 @@ mod inst {
         kill_others(&dir.join("Arcade.exe"));
         remove_shortcuts();
         let _ = fs::remove_file(startup_lnk());
-        let _ = Command::new("reg").args(["delete", REG, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
+        reg_delete();
         if wipe {
             let _ = fs::remove_dir_all(appdata_dir());
         } else {
@@ -1978,31 +2001,22 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
-fn sync_tray(app: &tauri::AppHandle, enabled: bool) {
+// Construit l'icône de la zone de notification (doit s'exécuter sur le thread principal)
+fn build_tray(app: &tauri::AppHandle) -> Result<(), String> {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-    if !enabled {
-        let _ = app.remove_tray_by_id("arcade");
-        return;
-    }
     if app.tray_by_id("arcade").is_some() {
-        return;
+        return Ok(());
     }
-    let open = MenuItem::with_id(app, "open", "Ouvrir Arcade", true, None::<&str>);
-    let quit = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>);
-    let menu = match (open, quit) {
-        (Ok(o), Ok(q)) => Menu::with_items(app, &[&o, &q]),
-        _ => return,
-    };
-    let menu = match menu {
-        Ok(m) => m,
-        Err(_) => return,
-    };
-    let mut b = TrayIconBuilder::with_id("arcade").tooltip("Arcade").menu(&menu).show_menu_on_left_click(false);
-    if let Some(icon) = app.default_window_icon() {
-        b = b.icon(icon.clone());
-    }
-    let _ = b
+    let open = MenuItem::with_id(app, "open", "Ouvrir Arcade", true, None::<&str>).map_err(|e| e.to_string())?;
+    let quit = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>).map_err(|e| e.to_string())?;
+    let menu = Menu::with_items(app, &[&open, &quit]).map_err(|e| e.to_string())?;
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).map_err(|e| e.to_string())?;
+    TrayIconBuilder::with_id("arcade")
+        .icon(icon)
+        .tooltip("Arcade")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
         .on_menu_event(|app, ev| match ev.id().as_ref() {
             "open" => show_main(app),
             "quit" => app.exit(0),
@@ -2013,7 +2027,24 @@ fn sync_tray(app: &tauri::AppHandle, enabled: bool) {
                 show_main(tray.app_handle());
             }
         })
-        .build(app);
+        .build(app)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+// Active ou retire l'icône ; peut être appelé depuis n'importe quel thread
+fn sync_tray(app: &tauri::AppHandle, enabled: bool) {
+    let h = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if enabled {
+            match build_tray(&h) {
+                Ok(_) => log(&h.state::<App>().dir, "Zone de notification : icône créée"),
+                Err(e) => log(&h.state::<App>().dir, &format!("Zone de notification : échec ({})", e)),
+            }
+        } else {
+            let _ = h.remove_tray_by_id("arcade");
+        }
+    });
 }
 
 fn tray_mode(app: &tauri::AppHandle) -> bool {
@@ -2104,7 +2135,7 @@ fn main() {
             }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
-                if tray_mode(app) {
+                if tray_mode(app) && app.tray_by_id("arcade").is_some() {
                     api.prevent_close();
                     let _ = window.hide();
                 }
@@ -2139,7 +2170,7 @@ fn main() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![api, setup])
+        .invoke_handler(tauri::generate_handler![api, setup, image])
         .setup(move |app| {
             if installer {
                 tauri::WebviewWindowBuilder::new(app, "setup", tauri::WebviewUrl::App("setup.html".into()))
@@ -2165,7 +2196,17 @@ fn main() {
                     .center()
                     .visible(!start_hidden)
                     .build()?;
-                sync_tray(app.handle(), db_tray);
+                if db_tray {
+                    match build_tray(app.handle()) {
+                        Ok(_) => log(&app.state::<App>().dir, "Zone de notification : icône créée"),
+                        Err(e) => {
+                            log(&app.state::<App>().dir, &format!("Zone de notification : échec ({})", e));
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                            }
+                        }
+                    }
+                }
             }
             Ok(())
         })

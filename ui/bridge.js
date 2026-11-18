@@ -10,12 +10,42 @@
     catch (e) { throw new Error(typeof e === 'string' ? e : (e && e.message) || 'Erreur'); }
   }
 
+  // Images : Rust renvoie un jeton « arc:cover/nom.jpg?x » ; l'image est lue en octets bruts puis affichée via un Blob (rapide, mis en cache)
+  const blobs = new Map();
+  const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp' };
+  async function resolveImage(tok) {
+    if (typeof tok !== 'string' || !tok.startsWith('arc:')) return tok;
+    if (blobs.has(tok)) return blobs.get(tok);
+    const m = /^arc:(cover|icon)\/([^?]*)/.exec(tok);
+    if (!m) return null;
+    const p = (async () => {
+      try {
+        const name = decodeURIComponent(m[2]);
+        const buf = await tauri.invoke('image', { kind: m[1], name });
+        const ext = (name.split('.').pop() || '').toLowerCase();
+        return URL.createObjectURL(new Blob([buf], { type: MIME[ext] || 'image/png' }));
+      } catch { return null; }
+    })();
+    blobs.set(tok, p);
+    return p;
+  }
+  async function withImages(lib) {
+    const games = lib && lib.games;
+    if (Array.isArray(games)) {
+      await Promise.all(games.map(async (g) => {
+        g.coverUrl = await resolveImage(g.coverUrl);
+        g.iconUrl = await resolveImage(g.iconUrl);
+      }));
+    }
+    return lib;
+  }
+
   const previews = new Map();
   let changedCb = null;
   let noticeCb = null;
 
   window.arcade = {
-    getLibrary: () => call('library'),
+    getLibrary: async () => withImages(await call('library')),
     pickGame: async () => (await call('pickGame')).paths || [],
     pickCover: async () => {
       const r = await call('pickCover');
@@ -50,7 +80,7 @@
     } catch {}
   };
   // Fenêtre réduite : on vérifie beaucoup moins souvent pour ne rien consommer
-  const loop = () => { beat(); setTimeout(loop, document.hidden ? 15000 : 3000); };
+  const loop = () => { beat(); setTimeout(loop, document.hidden ? 15000 : 1500); };
   loop();
   document.addEventListener('visibilitychange', () => document.body.classList.toggle('idle', document.hidden));
 })();

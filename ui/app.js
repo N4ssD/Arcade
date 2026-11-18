@@ -1970,6 +1970,6 @@
     const n = state.games.length, st = $('#splash-status');
     if (st) st.textContent = n ? n + (n > 1 ? ' jeux prêts' : ' jeu prêt') : 'Bienvenue';
     setTimeout(() => Sound.play('start'), 150);
-    setTimeout(endSplash, Math.max(0, 2100 - (performance.now() - bootStart)));
+    setTimeout(endSplash, Math.max(0, 900 - (performance.now() - bootStart)));
   }).catch(() => endSplash());
 })();

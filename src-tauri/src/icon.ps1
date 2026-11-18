@@ -1,11 +1,10 @@
-﻿param([string]$Target, [string]$IconsDir)
+﻿param([string]$Target, [string]$ListFile, [string]$IconsDir, [string]$CacheDll)
 $ErrorActionPreference = 'Continue'
 $script:IconsDir = $IconsDir
 function Write-Log($m) { }
 function Test-IsUri($t) { return [bool]($t -match '^[a-zA-Z][a-zA-Z0-9+.\-]+://') }
 $script:IconsOk = $false
-try {
-    Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'
+$csrc = @'
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -100,7 +99,22 @@ public static class ArcadeIcons
     }
 }
 '@
-    $script:IconsOk = $true
+try {
+    $loaded = $false
+    if ($CacheDll -and (Test-Path -LiteralPath $CacheDll)) {
+        try { Add-Type -Path $CacheDll; $loaded = $true } catch {}
+    }
+    if (-not $loaded) {
+        if ($CacheDll) {
+            try {
+                Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $csrc -OutputAssembly $CacheDll
+                Add-Type -Path $CacheDll
+                $loaded = $true
+            } catch { try { Remove-Item -LiteralPath $CacheDll -Force -ErrorAction SilentlyContinue } catch {} }
+        }
+        if (-not $loaded) { Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $csrc; $loaded = $true }
+    }
+    $script:IconsOk = $loaded
 } catch { Write-Log "Module d'icones indisponible : $($_.Exception.Message)" }
 
 function Get-IconSource($target) {
@@ -158,5 +172,14 @@ function Save-IconFor($target) {
         if ($bmp) { $bmp.Dispose() }
     }
 }
-$r = Save-IconFor $Target
-if ($r) { [Console]::Out.Write((Split-Path -Leaf $r)) }
+$targets = @()
+if ($ListFile -and (Test-Path -LiteralPath $ListFile)) { $targets = @(Get-Content -LiteralPath $ListFile -Encoding UTF8) }
+elseif ($Target) { $targets = @($Target) }
+foreach ($tg in $targets) {
+    $name = ''
+    if ($tg) {
+        $r = Save-IconFor $tg.Trim()
+        if ($r) { $name = (Split-Path -Leaf $r) }
+    }
+    [Console]::Out.WriteLine($name)
+}
