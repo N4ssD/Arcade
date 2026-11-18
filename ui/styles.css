@@ -953,19 +953,52 @@ body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: tra
 @media (max-width: 1000px) { .av-lvl { display: none; } }
 @media (max-width: 800px) { .av-coins { display: none; } }
 
-/* Humeurs de l'avatar */
+/* Vie de l'avatar : chaque calque (tête, bras, jambes, yeux) bouge à son rythme, avec des courbes douces et un léger décalage (comme un vrai mouvement) */
 .av-z { position: absolute; z-index: 2; font-family: var(--font-px); font-style: normal; font-size: 12px; color: var(--accent-2, #C9B8FF); opacity: 0; pointer-events: none; }
-.av-z.z1 { right: 8px; top: 18px; }
-.av-z.z2 { right: 0; top: 8px; font-size: 14px; }
-.av-strip:not(.still) .mood-sleep > span { animation: avBreath 3s ease-in-out infinite; transform-origin: 50% 100%; }
-.av-strip:not(.still) .mood-sleep .av-z { animation: avZ 2.6s ease-in-out infinite; }
-.av-strip:not(.still) .mood-sleep .av-z.z2 { animation-delay: 1.2s; }
-.av-strip:not(.still) .mood-happy > span { animation: avHop 1.1s ease-in-out infinite; }
-.av-strip:not(.still) .mood-impatient > span { animation: avTap .5s steps(2, end) infinite; transform-origin: 50% 100%; }
-@keyframes avBreath { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.97); } }
-@keyframes avZ { 0% { opacity: 0; transform: translate(0, 6px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -14px); } }
-@keyframes avHop { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
-@keyframes avTap { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+.av-z.z1 { right: 9px; top: 20px; }
+.av-z.z2 { right: 1px; top: 8px; font-size: 14px; }
+.av-who svg g { transform-box: fill-box; }
+.av-who .av-torso { transform-origin: 50% 100%; }
+.av-who .av-head { transform-origin: 50% 100%; }
+.av-who .av-armL, .av-who .av-armR { transform-origin: 50% 0; }
+.av-who .av-legL, .av-who .av-legR { transform-origin: 50% 0; }
+.av-who .av-eyes { transform-origin: 50% 50%; }
+.av-strip:not(.still) .av-who > span { transform-origin: 50% 100%; }
+/* au repos : respiration, bras qui balancent à peine, tête en léger retard, clignement des yeux */
+.av-strip:not(.still) .av-who .av-torso { animation: avBreath 3.8s cubic-bezier(.45, 0, .55, 1) infinite; }
+.av-strip:not(.still) .av-who .av-head { animation: avHeadBob 3.8s cubic-bezier(.45, 0, .55, 1) .18s infinite; }
+.av-strip:not(.still) .av-who .av-armL { animation: avArmL 3.8s cubic-bezier(.45, 0, .55, 1) .1s infinite; }
+.av-strip:not(.still) .av-who .av-armR { animation: avArmR 3.8s cubic-bezier(.45, 0, .55, 1) .1s infinite; }
+.av-strip:not(.still) .av-who .av-eyes { animation: avBlink 5.2s infinite; }
+.av-strip:not(.still) .av-who.mood-sleep .av-eyes, .av-strip:not(.still) .av-who.mood-happy .av-eyes { animation: none; }
+/* endormi : respiration lente et tête qui penche */
+.av-strip:not(.still) .av-who.mood-sleep .av-torso { animation: avBreath 5.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-sleep .av-head { animation: avNod 5.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-sleep .av-z { animation: avZ 3.4s cubic-bezier(.3, .6, .4, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-sleep .av-z.z2 { animation-delay: 1.5s; }
+/* content : petit saut avec écrasement/étirement, bras levés, tête qui s'incline */
+.av-strip:not(.still) .av-who.mood-happy > span { animation: avHop 1.25s cubic-bezier(.33, 0, .3, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-happy .av-armL { animation: avCheerL 1.25s cubic-bezier(.33, 0, .3, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-happy .av-armR { animation: avCheerR 1.25s cubic-bezier(.33, 0, .3, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-happy .av-head { animation: avTilt 2.5s cubic-bezier(.45, 0, .55, 1) infinite; }
+/* impatient : il tape du pied, se balance d'un pied sur l'autre et regarde sur le côté */
+.av-strip:not(.still) .av-who.mood-impatient > span { animation: avSway 2.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-impatient .av-legR { animation: avTap .6s cubic-bezier(.4, 0, .6, 1) infinite; }
+.av-strip:not(.still) .av-who.mood-impatient .av-head { animation: avLook 2.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes avBreath { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.018); } }
+@keyframes avHeadBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.35px); } }
+@keyframes avArmL { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(2.5deg); } }
+@keyframes avArmR { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-2.5deg); } }
+@keyframes avBlink { 0%, 90%, 100% { transform: scaleY(1); } 93%, 95% { transform: scaleY(.1); } }
+@keyframes avNod { 0%, 100% { transform: rotate(3deg) translateY(.15px); } 50% { transform: rotate(6.5deg) translateY(.3px); } }
+@keyframes avZ { 0% { opacity: 0; transform: translate(0, 6px) scale(.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -16px) scale(1.15); } }
+@keyframes avHop { 0% { transform: translateY(0) scale(1.05, .93); } 18% { transform: translateY(0) scale(1, 1); } 45% { transform: translateY(-7px) scale(.96, 1.06); } 72% { transform: translateY(0) scale(1.05, .93); } 100% { transform: translateY(0) scale(1.05, .93); } }
+@keyframes avCheerL { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(-38deg); } 72% { transform: rotate(6deg); } }
+@keyframes avCheerR { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(38deg); } 72% { transform: rotate(-6deg); } }
+@keyframes avTilt { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+@keyframes avSway { 0%, 100% { transform: translateX(-.8px) rotate(-.8deg); } 50% { transform: translateX(.8px) rotate(.8deg); } }
+@keyframes avTap { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-.55px); } }
+@keyframes avLook { 0%, 100% { transform: translateX(-.4px); } 50% { transform: translateX(.5px); } }
 
 .av-modal { width: min(1040px, 95vw); height: min(680px, 90vh); }
 .av-mh { display: flex; align-items: center; gap: 14px; padding: 18px 22px 8px; }

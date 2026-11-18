@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.0 — More looks, smoother avatar
+- 5 new hairstyles (ponytail, bun, bob, mohawk, afro), 5 new tops (tank top, shirt, Hawaiian shirt, overalls, armor) and a skirt.
+- Animations rebuilt: gentle breathing, blinking, head and arms moving with a slight delay, a squash-and-stretch jump when happy, a nodding head when asleep, a tapping foot when impatient.
+
 ## 2.5.1 — Consistent toolbar
 - Search, sort, Categories, Surprise me and Full screen now share the same height, rounding and background.
 - The sort list arrow no longer touches the border.

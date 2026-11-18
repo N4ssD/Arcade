@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.5.1';
+  const APP_VERSION = '2.6.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1268,6 +1268,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.6.0', title: 'Plus de looks, avatar plus fluide', items: ['5 nouvelles coiffures (queue de cheval, chignon, carré, crête, afro), 5 nouveaux hauts (débardeur, chemise, hawaï, salopette, armure) et une jupe.', 'Animations refaites : respiration douce, clignement des yeux, tête et bras qui bougent avec un léger décalage, saut avec écrasement quand il est content, tête qui penche quand il dort, pied qui tape quand il s\'impatiente.'] },
     { v: '2.5.1', title: 'Barre d\'outils harmonisée', items: ['Recherche, tri, Catégories, Surprends-moi et Plein écran ont maintenant la même hauteur, le même arrondi et le même fond.', 'La flèche de la liste de tri est décollée du bord.'] },
     { v: '2.5.0', title: 'Avatar vivant et volume à 30 %', items: ['L\'avatar réagit : il s\'endort quand tu es inactif, il est content quand tu lances un jeu (et quand tu reviens), il s\'impatiente si tu traînes dans les menus.', 'Tenues automatiques : pyjama la nuit, lunettes de soleil l\'après-midi, bonnet en hiver, costume de sorcière à Halloween (désactivable dans Paramètres > Apparence).', 'Le volume par défaut est maintenant de 30 % partout (une fois, y compris sur les installations existantes ; tu peux le changer dans Paramètres > Sons).'] },
     { v: '2.4.2', title: 'Avatar en bande', items: ['L\'avatar passe dans une bande fine sous la barre de recherche (personnage, phrase, pièces, niveau, bouton Personnaliser) : la bibliothèque garde toute sa largeur.', 'La croix masque la bande ; l\'entrée « Mon avatar » du menu la rouvre.'] },

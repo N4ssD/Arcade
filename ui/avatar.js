@@ -13,11 +13,13 @@
 
   // price : pièces ; ach : id du succès à débloquer (voir ACH dans app.js)
   const ITEMS = {
-    hair: [{ id: 'h0', n: 'Court' }, { id: 'h1', n: 'Long' }, { id: 'h3', n: 'Frange' }, { id: 'h2', n: 'Pointes', price: 60 }],
+    hair: [{ id: 'h0', n: 'Court' }, { id: 'h1', n: 'Long' }, { id: 'h3', n: 'Frange' }, { id: 'h2', n: 'Pointes', price: 60 },
+      { id: 'h4', n: 'Queue de cheval', price: 40 }, { id: 'h5', n: 'Chignon', price: 40 }, { id: 'h8', n: 'Carré', price: 50 }, { id: 'h6', n: 'Crête', price: 70 }, { id: 'h7', n: 'Afro', price: 70 }],
     face: [{ id: 'f0', n: 'Sourire' }, { id: 'f1', n: 'Heureux' }, { id: 'f2', n: 'Sérieux' }, { id: 'f3', n: 'Surpris', price: 40 }],
-    top: [{ id: 'hoodie', n: 'Sweat' }, { id: 'tee', n: 'T-shirt' }, { id: 'jacket', n: 'Veste' }, { id: 'stripe', n: 'Marinière', price: 120 },
-      { id: 'star', n: 'Étoilé', price: 150 }, { id: 'medal', n: 'Centurion', ach: 't100', need: '100 h de jeu' }, { id: 'flame', n: 'Flamme', ach: 's7', need: '7 jours d\'affilée' }],
-    bottom: [{ id: 'pants', n: 'Pantalon' }, { id: 'shorts', n: 'Short', price: 90 }],
+    top: [{ id: 'hoodie', n: 'Sweat' }, { id: 'tee', n: 'T-shirt' }, { id: 'jacket', n: 'Veste' }, { id: 'tank', n: 'Débardeur', price: 60 }, { id: 'shirt', n: 'Chemise', price: 80 }, { id: 'hawaii', n: 'Hawaï', price: 100 }, { id: 'stripe', n: 'Marinière', price: 120 },
+      { id: 'overalls', n: 'Salopette', price: 130 },
+      { id: 'star', n: 'Étoilé', price: 150 }, { id: 'knight', n: 'Armure', price: 220 }, { id: 'medal', n: 'Centurion', ach: 't100', need: '100 h de jeu' }, { id: 'flame', n: 'Flamme', ach: 's7', need: '7 jours d\'affilée' }],
+    bottom: [{ id: 'pants', n: 'Pantalon' }, { id: 'shorts', n: 'Short', price: 90 }, { id: 'skirt', n: 'Jupe', price: 90 }],
     shoes: [{ id: 'sneaker', n: 'Baskets' }, { id: 'boot', n: 'Bottes', price: 60 }],
     acc: [{ id: 'none', n: 'Aucun' }, { id: 'phones', n: 'Casque' }, { id: 'glasses', n: 'Lunettes', price: 40 }, { id: 'cap', n: 'Casquette', price: 80 },
       { id: 'crown', n: 'Couronne', ach: 'g50', need: '50 jeux' }],
@@ -49,54 +51,79 @@
     return '#' + ((1 << 24) | (f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).slice(1);
   }
 
-  // view : full | head | top | bottom | shoes
+  // view : full | head | face | top | bottom | shoes. Le personnage est dessiné en calques (jambes, torse, bras, tête, yeux) pour pouvoir être animé en CSS.
   function svg(a, view, size, over) {
     a = Object.assign(sanitize(a), over || {}); // over : tenue ou humeur temporaire (valeurs internes, jamais saisies par l'utilisateur)
-    const g = [];
-    const R = (x, y, w, h, c) => g.push('<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>');
-    const sk = a.skin, hr = a.hair, tp = a.topC, bt = a.bottomC, sc = a.shoesC;
-    // jambes (short : les jambes sont de la couleur de la peau) et chaussures
+    const G = { legL: [], legR: [], torso: [], armL: [], armR: [], head: [], eyes: [] };
+    let t = G.legL;
+    const rect = (x, y, w, h, c) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>';
+    const R = (x, y, w, h, c) => t.push(rect(x, y, w, h, c));
+    const E = (x, y, w, h, c) => G.eyes.push(rect(x, y, w, h, c));
+    const sk = a.skin, hr = a.hair, tp = a.topC, bt = a.bottomC, sc = a.shoesC, skd = shade(sk, -18);
+    const hl = shade(bt, 18), dk = shade(bt, -22);
+    // jambes (une moitié chacune) : pantalon, short ou jupe
     if (a.bottom === 'shorts') {
-      R(4, 18, 8, 2, bt); R(7, 19, 2, 1, NS); R(4, 20, 3, 2, sk); R(9, 20, 3, 2, sh(sk, -18));
+      t = G.legL; R(4, 18, 4, 2, bt); R(7, 19, 1, 1, NS); R(4, 20, 3, 2, sk);
+      t = G.legR; R(8, 18, 4, 2, bt); R(8, 19, 1, 1, NS); R(9, 20, 3, 2, skd);
+    } else if (a.bottom === 'skirt') {
+      t = G.legL; R(3, 18, 5, 2, bt); R(3, 19, 5, 1, dk); R(4, 20, 3, 2, sk);
+      t = G.legR; R(8, 18, 5, 2, bt); R(8, 19, 5, 1, dk); R(9, 20, 3, 2, skd);
     } else {
-      R(4, 18, 8, 4, bt); R(7, 19, 2, 3, NS); R(4, 18, 8, 1, shade(bt, 18)); R(11, 18, 1, 4, shade(bt, -22));
+      t = G.legL; R(4, 18, 4, 4, bt); R(4, 18, 4, 1, hl); R(7, 19, 1, 3, NS);
+      t = G.legR; R(8, 18, 4, 4, bt); R(8, 18, 4, 1, hl); R(8, 19, 1, 3, NS); R(11, 18, 1, 4, dk);
     }
-    if (a.shoes === 'boot') {
-      R(4, 21, 4, 3, sc); R(8, 21, 4, 3, sc); R(4, 21, 4, 1, shade(sc, 35)); R(8, 21, 4, 1, shade(sc, 35)); R(4, 23, 4, 1, shade(sc, -40)); R(8, 23, 4, 1, shade(sc, -40));
-    } else {
-      R(4, 22, 4, 2, sc); R(8, 22, 4, 2, sc); R(4, 23, 4, 1, shade(sc, -40)); R(8, 23, 4, 1, shade(sc, -40)); R(4, 22, 3, 1, shade(sc, 40)); R(8, 22, 3, 1, shade(sc, 40));
+    [[G.legL, 4], [G.legR, 8]].forEach(([arr, x]) => {
+      t = arr;
+      if (a.shoes === 'boot') { R(x, 21, 4, 3, sc); R(x, 21, 4, 1, shade(sc, 35)); R(x, 23, 4, 1, shade(sc, -40)); }
+      else { R(x, 22, 4, 2, sc); R(x, 23, 4, 1, shade(sc, -40)); R(x, 22, 3, 1, shade(sc, 40)); }
+    });
+    // torse
+    t = G.torso;
+    const T = a.top, armC = T === 'tank' ? sk : T === 'knight' ? '#9aa0b8' : tp;
+    if (T === 'tank') { R(3, 11, 10, 7, sk); R(11, 11, 2, 7, skd); R(5, 11, 6, 7, tp); R(7, 11, 2, 1, sk); R(5, 11, 6, 1, shade(tp, 25)); }
+    else if (T === 'knight') { R(3, 11, 10, 7, '#9aa0b8'); R(3, 11, 10, 1, '#c3c8de'); R(12, 12, 1, 6, '#7b819a'); R(3, 16, 10, 1, '#6b7088'); R(7, 13, 2, 2, '#ffd166'); R(2, 11, 2, 2, '#c3c8de'); R(12, 11, 2, 2, '#aab0c8'); }
+    else {
+      R(3, 11, 10, 7, tp); R(3, 11, 10, 1, shade(tp, 25)); R(12, 12, 1, 6, shade(tp, -28));
+      if (T === 'hoodie' || T === 'flame') { R(6, 12, 4, 1, shade(tp, -30)); R(7, 13, 1, 3, '#f0f0f6'); R(9, 13, 1, 3, '#f0f0f6'); R(6, 16, 4, 2, shade(tp, -25)); }
+      if (T === 'flame') { R(7, 16, 2, 1, '#ffd166'); R(7, 15, 1, 1, '#E8663D'); }
+      if (T === 'stripe') { R(3, 13, 10, 1, '#fff'); R(3, 15, 10, 1, '#fff'); }
+      if (T === 'jacket') { R(7, 11, 2, 7, '#f0f0f6'); R(3, 17, 10, 1, shade(tp, -30)); }
+      if (T === 'star') { [[5, 13], [10, 15], [8, 17], [4, 16], [10, 12]].forEach(([x, y]) => R(x, y, 1, 1, '#ffd166')); }
+      if (T === 'tee') { R(7, 13, 2, 3, shade(tp, 60)); R(6, 14, 4, 1, shade(tp, 60)); }
+      if (T === 'medal') { R(7, 13, 2, 3, '#ffd166'); R(6, 14, 4, 1, '#ffd166'); R(7, 14, 2, 1, '#fff2c0'); }
+      if (T === 'pajama') { R(3, 13, 10, 1, shade(tp, 40)); R(3, 16, 10, 1, shade(tp, 40)); R(5, 12, 1, 1, '#ffd166'); R(10, 14, 1, 1, '#ffd166'); R(7, 17, 1, 1, '#ffd166'); }
+      if (T === 'pumpkin') { R(5, 13, 1, 1, NS); R(10, 13, 1, 1, NS); R(6, 15, 4, 1, NS); R(5, 14, 1, 1, NS); R(10, 14, 1, 1, NS); }
+      if (T === 'shirt') { R(6, 11, 4, 1, '#f0f0f6'); R(7, 12, 2, 1, '#f0f0f6'); R(8, 12, 1, 6, shade(tp, -25)); R(8, 14, 1, 1, '#f0f0f6'); R(8, 16, 1, 1, '#f0f0f6'); R(10, 14, 2, 2, shade(tp, -20)); }
+      if (T === 'hawaii') { R(6, 11, 2, 2, shade(tp, 40)); R(8, 11, 2, 2, shade(tp, 40)); [[5, 14, '#ffd166'], [9, 14, '#ff9fb8'], [11, 16, '#ffd166'], [6, 16, '#ff9fb8'], [4, 15, '#7ED0A6'], [8, 17, '#7ED0A6']].forEach(([x, y, c]) => R(x, y, 1, 1, c)); }
+      if (T === 'overalls') { const dn = '#3a5a8c'; R(5, 11, 1, 3, dn); R(10, 11, 1, 3, dn); R(5, 14, 6, 4, dn); R(7, 15, 2, 2, shade(dn, 25)); R(5, 14, 1, 1, '#ffd166'); R(10, 14, 1, 1, '#ffd166'); }
     }
-    function sh(c, v) { return shade(c, v); }
-    // haut
-    R(3, 11, 10, 7, tp); R(3, 11, 10, 1, shade(tp, 25)); R(12, 12, 1, 6, shade(tp, -28));
-    if (a.top === 'hoodie' || a.top === 'flame') { R(6, 12, 4, 1, shade(tp, -30)); R(7, 13, 1, 3, '#f0f0f6'); R(9, 13, 1, 3, '#f0f0f6'); R(6, 16, 4, 2, shade(tp, -25)); }
-    if (a.top === 'flame') { R(7, 16, 2, 1, '#ffd166'); R(7, 15, 1, 1, '#E8663D'); }
-    if (a.top === 'stripe') { R(3, 13, 10, 1, '#fff'); R(3, 15, 10, 1, '#fff'); }
-    if (a.top === 'jacket') { R(7, 11, 2, 7, '#f0f0f6'); R(3, 17, 10, 1, shade(tp, -30)); }
-    if (a.top === 'star') { [[5, 13], [10, 15], [8, 17], [4, 16], [10, 12]].forEach(([x, y]) => R(x, y, 1, 1, '#ffd166')); }
-    if (a.top === 'tee') { R(7, 13, 2, 3, shade(tp, 60)); R(6, 14, 4, 1, shade(tp, 60)); }
-    if (a.top === 'pajama') { R(3, 13, 10, 1, shade(tp, 40)); R(3, 16, 10, 1, shade(tp, 40)); R(5, 12, 1, 1, '#ffd166'); R(10, 14, 1, 1, '#ffd166'); R(7, 17, 1, 1, '#ffd166'); }
-    if (a.top === 'pumpkin') { R(5, 13, 1, 1, '#14141c'); R(10, 13, 1, 1, '#14141c'); R(6, 15, 4, 1, '#14141c'); R(5, 14, 1, 1, '#14141c'); R(10, 14, 1, 1, '#14141c'); }
-    if (a.top === 'medal') { R(7, 13, 2, 3, '#ffd166'); R(6, 14, 4, 1, '#ffd166'); R(7, 14, 2, 1, '#fff2c0'); }
     // bras et mains
-    R(2, 12, 1, 5, tp); R(13, 12, 1, 5, shade(tp, -28)); R(2, 17, 1, 2, sk); R(13, 17, 1, 2, shade(sk, -25));
-    // cou, tête
-    R(7, 10, 2, 2, shade(sk, -22)); R(4, 3, 8, 8, sk); R(11, 4, 1, 6, shade(sk, -18));
+    t = G.armL; R(2, 12, 1, 5, armC); R(2, 17, 1, 2, sk);
+    t = G.armR; R(13, 12, 1, 5, shade(armC, -28)); R(13, 17, 1, 2, shade(sk, -25));
+    // cou, tête, visage
+    t = G.head;
+    R(7, 10, 2, 2, shade(sk, -22)); R(4, 3, 8, 8, sk); R(11, 4, 1, 6, skd);
     R(5, 8, 1, 1, 'rgba(255,120,140,.45)'); R(10, 8, 1, 1, 'rgba(255,120,140,.45)');
-    const mouth = shade(sk, -75);
-    const mood = a.mood;
-    if (mood === 'sleep') { R(5, 7, 2, 1, NS); R(9, 7, 2, 1, NS); R(7, 9, 2, 1, mouth); }
-    else if (mood === 'happy') { R(5, 7, 1, 1, NS); R(6, 6, 1, 1, NS); R(7, 7, 1, 1, NS); R(9, 7, 1, 1, NS); R(10, 6, 1, 1, NS); R(11, 7, 1, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); R(7, 10, 2, 1, '#c4636b'); }
-    else if (mood === 'impatient') { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 5, 2, 1, hr); R(9, 5, 2, 1, hr); R(6, 9, 4, 1, mouth); R(13, 5, 1, 2, '#8fd0ff'); }
-    else if (a.face === 'f1') { R(5, 7, 2, 1, NS); R(9, 7, 2, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); }
-    else if (a.face === 'f2') { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 5, 2, 1, shade(hr, 0)); R(9, 5, 2, 1, shade(hr, 0)); R(7, 9, 2, 1, mouth); }
-    else if (a.face === 'f3') { R(5, 6, 2, 2, '#fff'); R(9, 6, 2, 2, '#fff'); R(6, 7, 1, 1, NS); R(10, 7, 1, 1, NS); R(7, 9, 2, 2, '#7a3b45'); }
-    else { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 6, 1, 1, '#fff'); R(10, 6, 1, 1, '#fff'); R(7, 9, 2, 1, mouth); }
+    const mouth = shade(sk, -75), mood = a.mood;
+    if (mood === 'sleep') { E(5, 7, 2, 1, NS); E(9, 7, 2, 1, NS); R(7, 9, 2, 1, mouth); }
+    else if (mood === 'happy') { E(5, 7, 1, 1, NS); E(6, 6, 1, 1, NS); E(7, 7, 1, 1, NS); E(9, 7, 1, 1, NS); E(10, 6, 1, 1, NS); E(11, 7, 1, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); R(7, 10, 2, 1, '#c4636b'); }
+    else if (mood === 'impatient') { E(5, 6, 1, 2, NS); E(10, 6, 1, 2, NS); R(5, 5, 2, 1, hr); R(9, 5, 2, 1, hr); R(6, 9, 4, 1, mouth); R(13, 5, 1, 2, '#8fd0ff'); }
+    else if (a.face === 'f1') { E(5, 7, 2, 1, NS); E(9, 7, 2, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); }
+    else if (a.face === 'f2') { E(5, 6, 1, 2, NS); E(10, 6, 1, 2, NS); R(5, 5, 2, 1, hr); R(9, 5, 2, 1, hr); R(7, 9, 2, 1, mouth); }
+    else if (a.face === 'f3') { E(5, 6, 2, 2, '#fff'); E(9, 6, 2, 2, '#fff'); E(6, 7, 1, 1, NS); E(10, 7, 1, 1, NS); R(7, 9, 2, 2, '#7a3b45'); }
+    else { E(5, 6, 1, 2, NS); E(10, 6, 1, 2, NS); E(5, 6, 1, 1, '#fff'); E(10, 6, 1, 1, '#fff'); R(7, 9, 2, 1, mouth); }
+    t.push('<g class="av-eyes">' + G.eyes.join('') + '</g>');
     // cheveux
-    if (a.hs === 'h0') { R(4, 2, 8, 2, hr); R(3, 3, 1, 4, hr); R(12, 3, 1, 4, hr); R(4, 4, 3, 1, hr); R(8, 3, 4, 1, hr); }
-    if (a.hs === 'h1') { R(4, 2, 8, 2, hr); R(3, 3, 2, 8, hr); R(11, 3, 2, 8, hr); R(4, 4, 2, 1, hr); R(8, 4, 3, 1, hr); }
-    if (a.hs === 'h2') { R(4, 2, 8, 3, hr); R(3, 4, 1, 3, hr); R(12, 4, 1, 3, hr); R(4, 1, 1, 1, hr); R(6, 0, 1, 2, hr); R(8, -1, 1, 3, hr); R(10, 0, 1, 2, hr); R(11, 1, 1, 1, hr); }
-    if (a.hs === 'h3') { R(4, 2, 8, 2, hr); R(3, 3, 1, 3, hr); R(12, 3, 1, 3, hr); R(4, 4, 8, 1, hr); R(5, 5, 2, 1, hr); }
+    const H = a.hs;
+    if (H === 'h0') { R(4, 2, 8, 2, hr); R(3, 3, 1, 4, hr); R(12, 3, 1, 4, hr); R(4, 4, 3, 1, hr); R(8, 3, 4, 1, hr); }
+    if (H === 'h1') { R(4, 2, 8, 2, hr); R(3, 3, 2, 8, hr); R(11, 3, 2, 8, hr); R(4, 4, 2, 1, hr); R(8, 4, 3, 1, hr); }
+    if (H === 'h2') { R(4, 2, 8, 3, hr); R(3, 4, 1, 3, hr); R(12, 4, 1, 3, hr); R(4, 1, 1, 1, hr); R(6, 0, 1, 2, hr); R(8, -1, 1, 3, hr); R(10, 0, 1, 2, hr); R(11, 1, 1, 1, hr); }
+    if (H === 'h3') { R(4, 2, 8, 2, hr); R(3, 3, 1, 3, hr); R(12, 3, 1, 3, hr); R(4, 4, 8, 1, hr); R(5, 5, 2, 1, hr); }
+    if (H === 'h4') { R(4, 2, 8, 2, hr); R(3, 3, 1, 3, hr); R(12, 3, 1, 3, hr); R(4, 4, 8, 1, hr); R(13, 3, 1, 1, hr); R(13, 4, 2, 5, hr); R(14, 9, 1, 1, hr); R(12, 3, 1, 2, shade(hr, -30)); }
+    if (H === 'h5') { R(4, 2, 8, 2, hr); R(3, 3, 1, 4, hr); R(12, 3, 1, 4, hr); R(4, 4, 3, 1, hr); R(6, 0, 4, 2, hr); R(7, -1, 2, 1, hr); R(7, 0, 1, 1, shade(hr, 40)); }
+    if (H === 'h6') { R(6, 0, 4, 4, hr); R(7, -2, 2, 2, hr); R(4, 3, 8, 1, shade(hr, -40)); R(3, 4, 1, 2, shade(hr, -40)); R(12, 4, 1, 2, shade(hr, -40)); }
+    if (H === 'h7') { R(3, -2, 10, 1, hr); R(2, -1, 12, 4, hr); R(1, 0, 1, 6, hr); R(14, 0, 1, 6, hr); R(2, 3, 2, 3, hr); R(12, 3, 2, 3, hr); R(4, 3, 8, 1, hr); R(5, -1, 2, 1, shade(hr, 35)); }
+    if (H === 'h8') { R(4, 2, 8, 2, hr); R(3, 3, 2, 6, hr); R(11, 3, 2, 6, hr); R(3, 9, 3, 1, hr); R(10, 9, 3, 1, hr); R(4, 4, 8, 1, hr); }
     // accessoire
     if (a.acc === 'phones') { R(2, 5, 2, 4, '#2b2b3a'); R(12, 5, 2, 4, '#2b2b3a'); R(3, 1, 10, 1, '#2b2b3a'); R(2, 6, 1, 2, '#9C7CF0'); R(13, 6, 1, 2, '#9C7CF0'); R(2, 4, 1, 1, '#2b2b3a'); R(13, 4, 1, 1, '#2b2b3a'); }
     if (a.acc === 'glasses') { R(4, 6, 4, 3, NS); R(8, 6, 4, 3, NS); R(5, 7, 2, 1, '#8fd0ff'); R(9, 7, 2, 1, '#8fd0ff'); }
@@ -106,9 +133,10 @@
     if (a.acc === 'beanie') { R(3, 1, 10, 3, '#d94f7a'); R(3, 3, 10, 1, '#ECECF1'); R(7, -1, 2, 2, '#ECECF1'); R(5, 1, 1, 2, '#e8739a'); R(8, 1, 1, 2, '#e8739a'); }
     if (a.acc === 'witch') { R(2, 2, 12, 1, '#2a1a3a'); R(4, 0, 8, 2, '#3a2450'); R(6, -2, 4, 2, '#3a2450'); R(7, -4, 2, 2, '#3a2450'); R(4, 1, 8, 1, '#E8663D'); }
     if (a.acc === 'crown') { R(4, -1, 8, 2, '#ffd166'); R(4, -2, 1, 1, '#ffd166'); R(7, -3, 2, 2, '#ffd166'); R(11, -2, 1, 1, '#ffd166'); }
+    const body = ['legL', 'legR', 'torso', 'armL', 'armR', 'head'].map((k) => '<g class="av-' + k + '">' + G[k].join('') + '</g>').join('');
     const VB = { full: [0, -5, 16, 30], head: [2, -3, 12, 14], face: [3, 0, 10, 10], top: [1, 9, 14, 11], bottom: [3, 17, 10, 8], shoes: [3, 20, 10, 5] }[view || 'full'] || [0, -5, 16, 30];
     const w = size || 100, hgt = Math.round(w * VB[3] / VB[2]);
-    return '<svg width="' + w + '" height="' + hgt + '" style="width:' + w + 'px;height:' + hgt + 'px;stroke:none" viewBox="' + VB.join(' ') + '" shape-rendering="crispEdges" aria-hidden="true">' + g.join('') + '</svg>';
+    return '<svg width="' + w + '" height="' + hgt + '" style="width:' + w + 'px;height:' + hgt + 'px;stroke:none" viewBox="' + VB.join(' ') + '" shape-rendering="crispEdges" aria-hidden="true">' + body + '</svg>';
   }
 
   // Niveau : 1 + racine de (heures jouées + 5 par succès). Pièces : 1 par heure + 10 par succès, moins ce qui a été dépensé.
