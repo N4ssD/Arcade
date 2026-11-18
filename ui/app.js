@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.3.2';
+  const APP_VERSION = '2.3.3';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1093,6 +1093,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.3.3', title: 'Menu', items: ['Menu replié : fines lignes de séparation entre les groupes.', 'Le point « nouveauté » ne recouvre plus l\'icône Nouveautés (il se place dans son coin).', 'Nouvelle icône pour « Scanner un dossier » (dossier avec une loupe), pour ne plus la confondre avec les catégories.'] },
     { v: '2.3.2', title: 'Couleur perso', items: ['Le bouton « couleur personnalisée » (le rond arc-en-ciel) est remplacé par un rond discret en pointillés avec un « + » ; une fois une couleur choisie, il prend cette couleur et affiche un crayon.'] },
     { v: '2.3.1', title: 'Finitions', items: ['Panneau Performances : les cadres sont mieux espacés.', 'L\'indicateur de performances s\'affiche bien dans le menu quand il s\'ouvre.'] },
     { v: '2.3.0', title: 'Performances', items: ['Nouveau panneau « Performances » dans les réglages : mémoire (moteur d\'affichage compris), processeur et temps d\'ouverture, mesurés en direct.', 'Mode économie : les animations se mettent en pause quand la fenêtre est cachée ou pendant un jeu. Indicateur optionnel en bas du menu.', 'Arcade se rouvre beaucoup plus vite quand tu quittes un jeu.', 'Installation plus rapide : copie des fichiers en parallèle et moins d\'attente.'] },

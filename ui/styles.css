@@ -841,7 +841,7 @@ body.no-anim .bg-px { opacity: .3; }
 
 /* ---------- Nouveautés ---------- */
 #btn-news { position: relative; }
-.news-dot { position: absolute; left: 26px; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 2px var(--bg), 0 0 10px var(--accent); animation: newsPulse 1.6s ease-in-out infinite; }
+.news-dot { position: absolute; left: 32px; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 2px var(--bg); animation: newsPulse 1.6s ease-in-out infinite; }
 @keyframes newsPulse { 50% { transform: scale(1.35); } }
 .news-modal { width: min(640px, calc(100vw - 48px)); }
 .news-list { max-height: min(62vh, 520px); overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 6px; }
@@ -852,7 +852,7 @@ body.no-anim .bg-px { opacity: .3; }
 .news-head b { font-weight: 600; font-size: 16px; }
 .news-cur { font-style: normal; margin-left: auto; font-family: var(--font-px); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ok); }
 .news-ver ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; color: #C4C4D4; line-height: 1.4; }
-body.sb-collapsed .news-dot, body.collapsed .news-dot { left: 24px; }
+body.sb-collapsed .news-dot, body.collapsed .news-dot { left: 32px; }
 
 /* ---------- Succès ---------- */
 .ach-count { margin-left: auto; font-style: normal; font-family: var(--font-px); font-size: 12px; letter-spacing: 1px; color: var(--muted); }
@@ -921,3 +921,8 @@ body.automenu.menu-open .sidebar { box-shadow: none; }
 .pc-dot { width: 8px; height: 8px; border-radius: 50%; background: #5DD39E; flex-shrink: 0; }
 body.collapsed:not(.menu-open) .perf-chip span { display: none; }
 body.collapsed:not(.menu-open) .perf-chip { justify-content: center; padding: 8px 0; }
+
+/* Menu replié : fines séparations entre les groupes */
+body.collapsed:not(.menu-open) .nav.cats:not(:empty) { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 8px; }
+body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -8px; height: 1px; background: var(--line); }
