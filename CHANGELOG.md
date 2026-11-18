@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.2 — Build fix
+- Finishing touch on the engine split into modules.
+
 ## 2.8.1 — Tidier engine
 - The Rust engine is split into modules (utilities, settings, library storage, launching, covers, installer, updates, tray…). Nothing changes on screen.
 

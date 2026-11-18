@@ -136,3 +136,7 @@ pub(crate) fn public_game(dir: &Path, g: &Obj) -> Value {
     o.insert("exists".into(), json!(exists));
     Value::Object(o)
 }
+
+pub(crate) fn find_game(db: &Db, id: &str) -> Option<usize> {
+    db.games.iter().position(|g| g.get("id").and_then(|x| x.as_str()) == Some(id))
+}

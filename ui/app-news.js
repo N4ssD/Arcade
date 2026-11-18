@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.8.2', title: 'Correctif de compilation', items: ['Finition du découpage du moteur en modules.'] },
   { v: '2.8.1', title: 'Moteur mieux rangé', items: ['Le code du moteur (Rust) est découpé en modules : utilitaires, réglages, bibliothèque, lancement, couvertures, installation, mises à jour, zone de notification… Rien ne change à l\'écran.'] },
   { v: '2.8.0', title: 'Code mieux rangé', items: ['Le code de l\'interface est découpé en plusieurs fichiers (noyau, bibliothèque, succès, avatar, catégories, paramètres…). Rien ne change à l\'écran.'] },
   { v: '2.7.2', title: 'Finitions', items: ['Le bandeau « pièces à récupérer » est mieux aligné et traduit en anglais.'] },
