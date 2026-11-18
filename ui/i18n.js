@@ -180,6 +180,9 @@
     'Le lancement de jeux n\'est disponible que sous Windows.': 'Game launching is only available on Windows.',
     'Fichier introuvable. Il a peut-être été déplacé.': 'File not found. It may have been moved.', 'Protocole non autorisé.': 'Protocol not allowed.', 'Jeu introuvable.': 'Game not found.',
     'Arcade doit être lancé depuis Arcade.exe.': 'Arcade must be started from Arcade.exe.',
+    'Réduire Arcade quand un jeu se lance': 'Minimize Arcade when a game launches', 'Arcade se réduit dans la barre des tâches pendant que tu joues, pour ne consommer aucune ressource.': 'Arcade minimizes to the taskbar while you play, so it uses no resources.',
+    'Temps de jeu en direct et import Steam / Epic / GOG.': 'Live playtime and Steam / Epic / GOG import.', 'Arcade se réduit quand tu lances un jeu (réglable).': 'Arcade minimizes when you launch a game (adjustable).',
+    'Ce jeu est déjà en cours.': 'This game is already running.',
     // --- installeur ---
     'Installation d\'Arcade': 'Arcade setup', 'Installe Arcade pour ce compte. Aucun administrateur requis.': 'Installs Arcade for this account. No administrator required.',
     'Installer dans': 'Install to', 'Installé dans': 'Installed in', 'C\'est toi qui choisis où installer Arcade.': 'You choose where to install Arcade.', 'Modifier…': 'Change…',

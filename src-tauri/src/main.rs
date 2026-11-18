@@ -31,10 +31,26 @@ struct Db {
     daily: Obj,
 }
 
+// Un jeu lancé depuis Arcade et suivi pour compter le temps de jeu en direct
+struct Run {
+    child: Option<std::process::Child>,
+    watch: Option<PathBuf>,
+    start: i64,
+    last: i64,
+    seen: bool,
+    last_seen: i64,
+    next_check: i64,
+    next_remind: i64,
+}
+
 struct App {
     db: Mutex<Db>,
     dir: PathBuf,
+    running: Mutex<std::collections::HashMap<String, Run>>,
 }
+
+static NOTICES: Mutex<Vec<Value>> = Mutex::new(Vec::new());
+static LAST_SAVE: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
 
 // ---------- utilitaires ----------
 
@@ -186,7 +202,7 @@ fn default_settings() -> Obj {
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
-        "slideshow": false
+        "slideshow": false, "minimizeOnLaunch": true
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -251,7 +267,7 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
             }
         }
         "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
-        | "sidebarCollapsed" | "introAnim" | "trayMode" => {
+        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));
             }
@@ -400,21 +416,266 @@ fn public_game(dir: &Path, g: &Obj) -> Value {
 
 // ---------- lancement ----------
 
+struct Launched {
+    child: Option<std::process::Child>,
+    watch: Option<PathBuf>,
+}
+
+fn steam_root() -> Option<PathBuf> {
+    for (key, name) in [
+        (r"HKCU\Software\Valve\Steam", "SteamPath"),
+        (r"HKLM\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath"),
+        (r"HKLM\SOFTWARE\Valve\Steam", "InstallPath"),
+    ] {
+        for (_, n, v) in reg_values(key, false) {
+            if n.eq_ignore_ascii_case(name) {
+                let p = PathBuf::from(v.replace('/', "\\"));
+                if p.is_dir() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn steam_libraries() -> Vec<PathBuf> {
+    let root = match steam_root() {
+        Some(r) => r,
+        None => return vec![],
+    };
+    let mut libs = vec![root.clone()];
+    if let Ok(txt) = fs::read_to_string(root.join("steamapps").join("libraryfolders.vdf")) {
+        for line in txt.lines() {
+            let l = line.trim();
+            if l.starts_with("\"path\"") {
+                if let Some(v) = quoted_after(l, 1) {
+                    let p = PathBuf::from(v.replace("\\\\", "\\"));
+                    if p.is_dir() && !libs.contains(&p) {
+                        libs.push(p);
+                    }
+                }
+            }
+        }
+    }
+    libs
+}
+
+// n-ième texte entre guillemets d'une ligne (0 = la clé, 1 = la valeur)
+fn quoted_after(line: &str, n: usize) -> Option<String> {
+    line.split('"').skip(1).step_by(2).nth(n).map(|s| s.to_string())
+}
+
+fn vdf_value(txt: &str, key: &str) -> Option<String> {
+    for line in txt.lines() {
+        let l = line.trim();
+        if quoted_after(l, 0).map(|k| k.eq_ignore_ascii_case(key)).unwrap_or(false) {
+            return quoted_after(l, 1);
+        }
+    }
+    None
+}
+
+fn epic_manifests() -> Vec<Value> {
+    let base = match std::env::var_os("ProgramData") {
+        Some(b) => PathBuf::from(b).join(r"Epic\EpicGamesLauncher\Data\Manifests"),
+        None => return vec![],
+    };
+    let mut out = vec![];
+    if let Ok(rd) = fs::read_dir(base) {
+        for e in rd.flatten() {
+            if e.path().extension().map(|x| x.to_string_lossy().to_lowercase() == "item").unwrap_or(false) {
+                if let Ok(t) = fs::read_to_string(e.path()) {
+                    if let Ok(v) = serde_json::from_str::<Value>(t.trim_start_matches('\u{feff}')) {
+                        out.push(v);
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+// Dossier d'un jeu lancé via Steam / Epic : sert à voir quand le jeu tourne
+fn watch_dir_for(target: &str) -> Option<PathBuf> {
+    let l = target.to_lowercase();
+    if l.starts_with("steam://") {
+        let id = steam_appid_of(target);
+        if id == 0 {
+            return None;
+        }
+        for lib in steam_libraries() {
+            if let Ok(txt) = fs::read_to_string(lib.join("steamapps").join(format!("appmanifest_{}.acf", id))) {
+                if let Some(d) = vdf_value(&txt, "installdir") {
+                    let p = lib.join("steamapps").join("common").join(d);
+                    if p.is_dir() {
+                        return Some(p);
+                    }
+                }
+            }
+        }
+    } else if l.starts_with("com.epicgames.launcher://apps/") {
+        let rest = &target["com.epicgames.launcher://apps/".len()..];
+        let rest = rest.split('?').next().unwrap_or("");
+        let app = rest.rsplit("%3A").next().unwrap_or("").to_string();
+        for v in epic_manifests() {
+            if gs(&v, "AppName") == app {
+                let p = PathBuf::from(gs(&v, "InstallLocation"));
+                if p.is_dir() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
+}
+
+// Valeurs du registre : (clé, nom, valeur). `reg` est lancé en UTF-8 pour garder les accents.
 #[cfg(windows)]
-fn launch_target(g: &Obj) -> Result<(), String> {
+fn reg_values(key: &str, recursive: bool) -> Vec<(String, String, String)> {
+    let cmd = format!("/c chcp 65001 >nul & reg query \"{}\"{}", key, if recursive { " /s" } else { "" });
+    let out = match std::process::Command::new("cmd").raw_arg(cmd).creation_flags(CREATE_NO_WINDOW).output() {
+        Ok(o) => o,
+        Err(_) => return vec![],
+    };
+    let text = String::from_utf8_lossy(&out.stdout).to_string();
+    let mut cur = String::new();
+    let mut res = vec![];
+    for line in text.lines() {
+        let line = line.trim_end();
+        if line.starts_with("HKEY_") {
+            cur = line.trim().to_string();
+        } else if line.starts_with(' ') {
+            let t = line.trim_start();
+            if let Some((name, rest)) = t.split_once("    ") {
+                if let Some((typ, val)) = rest.trim_start().split_once("    ") {
+                    if typ.starts_with("REG_") {
+                        res.push((cur.clone(), name.to_string(), val.trim().to_string()));
+                    }
+                }
+            }
+        }
+    }
+    res
+}
+
+#[cfg(not(windows))]
+fn reg_values(_key: &str, _recursive: bool) -> Vec<(String, String, String)> {
+    vec![]
+}
+
+fn detect_launchers(known_targets: &[String]) -> Value {
+    let mut items: Vec<Value> = vec![];
+    let mut total = (0, 0, 0);
+    let mut counts = (0, 0, 0);
+    let known: Vec<String> = known_targets.iter().map(|t| t.to_lowercase()).collect();
+    let known_steam: Vec<u64> = known_targets.iter().map(|t| steam_appid_of(t)).filter(|n| *n > 0).collect();
+
+    // Steam
+    for lib in steam_libraries() {
+        if let Ok(rd) = fs::read_dir(lib.join("steamapps")) {
+            for e in rd.flatten() {
+                let fname = e.file_name().to_string_lossy().to_string();
+                if !(fname.starts_with("appmanifest_") && fname.ends_with(".acf")) {
+                    continue;
+                }
+                let txt = match fs::read_to_string(e.path()) {
+                    Ok(t) => t,
+                    Err(_) => continue,
+                };
+                let id = vdf_value(&txt, "appid").unwrap_or_default();
+                let nm = vdf_value(&txt, "name").unwrap_or_default();
+                let flags: i64 = vdf_value(&txt, "StateFlags").and_then(|f| f.parse().ok()).unwrap_or(4);
+                if id.is_empty() || nm.is_empty() || flags & 4 == 0 {
+                    continue;
+                }
+                let skip = ["Steamworks Common Redistributables", "Proton", "Steam Linux Runtime", "Steam Controller Configs", "Steam 360 Video Player", "SteamVR"];
+                if skip.iter().any(|s| nm.starts_with(s)) {
+                    continue;
+                }
+                total.0 += 1;
+                let target = format!("steam://rungameid/{}", id);
+                let idn: u64 = id.parse().unwrap_or(0);
+                if known.contains(&target.to_lowercase()) || known_steam.contains(&idn) {
+                    continue;
+                }
+                counts.0 += 1;
+                items.push(json!({ "launcher": "steam", "name": nm, "target": target, "key": format!("steam:{}", id) }));
+            }
+        }
+    }
+    // Epic Games
+    for v in epic_manifests() {
+        if gb(&v, "bIsIncompleteInstall") {
+            continue;
+        }
+        let (nm, app) = (gs(&v, "DisplayName"), gs(&v, "AppName"));
+        if nm.is_empty() || app.is_empty() || gs(&v, "LaunchExecutable").is_empty() || nm.starts_with("Unreal Engine") {
+            continue;
+        }
+        total.1 += 1;
+        let target = format!(
+            "com.epicgames.launcher://apps/{}%3A{}%3A{}?action=launch&silent=true",
+            gs(&v, "CatalogNamespace"),
+            gs(&v, "CatalogItemId"),
+            app
+        );
+        if known.contains(&target.to_lowercase()) {
+            continue;
+        }
+        counts.1 += 1;
+        items.push(json!({ "launcher": "epic", "name": nm, "target": target, "key": format!("epic:{}", app) }));
+    }
+    // GOG Galaxy
+    for base in [r"HKLM\SOFTWARE\WOW6432Node\GOG.com\Games", r"HKLM\SOFTWARE\GOG.com\Games"] {
+        let vals = reg_values(base, true);
+        if vals.is_empty() {
+            continue;
+        }
+        let mut keys: Vec<String> = vals.iter().map(|(k, _, _)| k.clone()).collect();
+        keys.sort();
+        keys.dedup();
+        for k in keys {
+            let get = |n: &str| vals.iter().find(|(kk, nn, _)| *kk == k && nn.eq_ignore_ascii_case(n)).map(|(_, _, v)| v.clone()).unwrap_or_default();
+            let (exe, nm) = (get("exe"), get("gameName"));
+            if exe.is_empty() || nm.is_empty() || !Path::new(&exe).is_file() {
+                continue;
+            }
+            total.2 += 1;
+            if known.contains(&exe.to_lowercase()) {
+                continue;
+            }
+            counts.2 += 1;
+            items.push(json!({ "launcher": "gog", "name": nm, "target": exe, "key": format!("gog:{}", file_name_of(&k)) }));
+        }
+        break;
+    }
+    items.sort_by(|a, b| (gs(a, "launcher"), gs(a, "name").to_lowercase()).cmp(&(gs(b, "launcher"), gs(b, "name").to_lowercase())));
+    json!({
+        "items": items,
+        "counts": { "steam": counts.0, "epic": counts.1, "gog": counts.2 },
+        "total": { "steam": total.0, "epic": total.1, "gog": total.2 },
+    })
+}
+
+#[cfg(windows)]
+fn launch_target(g: &Obj) -> Result<Launched, String> {
     let t = g.get("target").and_then(|x| x.as_str()).unwrap_or("").to_string();
     let args = g.get("args").and_then(|x| x.as_str()).unwrap_or("").to_string();
     let run_as = g.get("runAs").and_then(|x| x.as_bool()).unwrap_or(false);
+    let start_cmd = |target: &str, cwd: Option<&Path>| -> Result<(), String> {
+        let mut c = std::process::Command::new("cmd");
+        if let Some(d) = cwd {
+            c.current_dir(d);
+        }
+        c.raw_arg(format!("/c start \"\" \"{}\"", target)).creation_flags(CREATE_NO_WINDOW).spawn().map(|_| ()).map_err(|e| e.to_string())
+    };
     if is_uri(&t) {
         if !allowed_scheme(&t) {
             return Err("Protocole non autorisé.".into());
         }
-        std::process::Command::new("cmd")
-            .raw_arg(format!("/c start \"\" \"{}\"", t))
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(());
+        start_cmd(&t, None)?;
+        return Ok(Launched { child: None, watch: watch_dir_for(&t) });
     }
     let p = Path::new(&t);
     if !p.exists() {
@@ -429,7 +690,7 @@ fn launch_target(g: &Obj) -> Result<(), String> {
             .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map_err(|e| e.to_string())?;
-        return Ok(());
+        return Ok(Launched { child: None, watch: Some(dir) });
     }
     if ext == "exe" {
         let mut c = std::process::Command::new(&t);
@@ -437,20 +698,20 @@ fn launch_target(g: &Obj) -> Result<(), String> {
         if !args.is_empty() {
             c.raw_arg(&args);
         }
-        c.spawn().map_err(|e| e.to_string())?;
-    } else {
-        std::process::Command::new("cmd")
-            .current_dir(&dir)
-            .raw_arg(format!("/c start \"\" \"{}\"", t))
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        let child = c.spawn().map_err(|e| e.to_string())?;
+        return Ok(Launched { child: Some(child), watch: None });
     }
-    Ok(())
+    start_cmd(&t, Some(&dir))?;
+    let watch = match ext.as_str() {
+        "lnk" => lnk_target(p).and_then(|x| Path::new(&x).parent().map(|d| d.to_path_buf())).filter(|d| d.is_dir()),
+        "url" => url_file_target(p).and_then(|u| watch_dir_for(&u)),
+        _ => Some(dir),
+    };
+    Ok(Launched { child: None, watch })
 }
 
 #[cfg(not(windows))]
-fn launch_target(_g: &Obj) -> Result<(), String> {
+fn launch_target(_g: &Obj) -> Result<Launched, String> {
     Err("Le lancement de jeux n'est disponible que sous Windows.".into())
 }
 
@@ -711,7 +972,10 @@ fn media_data_url(path: &Path) -> Option<String> {
 
 fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, String> {
     match name {
-        "ping" => Ok(json!({ "ok": true, "changed": CHANGED.swap(false, Ordering::Relaxed), "notices": [] })),
+        "ping" => {
+            let notices: Vec<Value> = NOTICES.lock().map(|mut n| n.drain(..).collect()).unwrap_or_default();
+            Ok(json!({ "ok": true, "changed": CHANGED.swap(false, Ordering::Relaxed), "notices": notices }))
+        }
         "bye" => Ok(json!({ "ok": true })),
         "library" => {
             sync_categories(db);
@@ -879,24 +1143,6 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             save(dir, db);
             Ok(json!({ "ok": true }))
         }
-        "launch" => {
-            let id = gs(body, "id");
-            let idx = match find_game(db, &id) {
-                Some(i) => i,
-                None => return Ok(json!({ "ok": false, "error": "Jeu introuvable." })),
-            };
-            match launch_target(&db.games[idx]) {
-                Ok(()) => {
-                    let g = &mut db.games[idx];
-                    let n = g.get("launches").and_then(|x| x.as_i64()).unwrap_or(0) + 1;
-                    g.insert("lastPlayed".into(), json!(now_ms()));
-                    g.insert("launches".into(), json!(n));
-                    save(dir, db);
-                    Ok(json!({ "ok": true }))
-                }
-                Err(e) => Ok(json!({ "ok": false, "error": e })),
-            }
-        }
         "reveal" => {
             let id = gs(body, "id");
             if let Some(i) = find_game(db, &id) {
@@ -936,11 +1182,6 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             }
             save(dir, db);
             Ok(json!({ "ok": true, "settings": db.settings }))
-        }
-        // Couvertures et icônes : pas encore portées, on répond sans erreur pour ne pas déranger
-        // Fonctions pas encore portées dans la version Rust
-        "detectLaunchers" => {
-            Err("Pas encore disponible dans la version Rust (en cours de portage).".into())
         }
         _ => Err(format!("Fonction inconnue : {}", name)),
     }
@@ -1517,6 +1758,180 @@ async fn refresh_icon_cmd(state: &tauri::State<'_, App>, body: &Value) -> Result
     Ok(json!({ "ok": true, "found": ico.is_some() }))
 }
 
+// ---------- lancement et temps de jeu en direct ----------
+
+async fn launch_cmd(state: &tauri::State<'_, App>, app: &tauri::AppHandle, body: &Value) -> Result<Value, String> {
+    let id = gs(body, "id");
+    let mut db = state.db.lock().map_err(|_| "verrou".to_string())?;
+    let idx = match find_game(&db, &id) {
+        Some(i) => i,
+        None => return Ok(json!({ "ok": false, "error": "Jeu introuvable." })),
+    };
+    {
+        let mut runs = state.running.lock().map_err(|_| "verrou".to_string())?;
+        if let Some(r) = runs.get_mut(&id) {
+            let alive = match r.child.as_mut() {
+                Some(c) => matches!(c.try_wait(), Ok(None)),
+                None => r.seen || now_ms() - r.start < 240_000,
+            };
+            if alive {
+                return Ok(json!({ "ok": false, "error": "Ce jeu est déjà en cours." }));
+            }
+            runs.remove(&id);
+        }
+    }
+    match launch_target(&db.games[idx]) {
+        Ok(l) => {
+            let now = now_ms();
+            let g = &mut db.games[idx];
+            let n = g.get("launches").and_then(|x| x.as_i64()).unwrap_or(0) + 1;
+            g.insert("lastPlayed".into(), json!(now));
+            g.insert("launches".into(), json!(n));
+            save(&state.dir, &db);
+            let minimize = db.settings.get("minimizeOnLaunch").and_then(|x| x.as_bool()).unwrap_or(true);
+            drop(db);
+            if l.child.is_some() || l.watch.is_some() {
+                if let Ok(mut runs) = state.running.lock() {
+                    runs.insert(
+                        id,
+                        Run { child: l.child, seen: l.watch.is_none(), watch: l.watch, start: now, last: now, last_seen: now, next_check: now + 5000, next_remind: 0 },
+                    );
+                }
+            }
+            if minimize {
+                // Arcade se réduit pendant que tu joues : l'interface ne consomme plus rien
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.minimize();
+                }
+            }
+            Ok(json!({ "ok": true }))
+        }
+        Err(e) => Ok(json!({ "ok": false, "error": e })),
+    }
+}
+
+fn path_under(exe: &Path, prefix_lower: &str) -> bool {
+    exe.to_string_lossy().to_lowercase().starts_with(prefix_lower)
+}
+
+// Appelée toutes les 2 secondes : ne fait rien tant qu'aucun jeu n'est suivi
+fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
+    let st = app.state::<App>();
+    let mut db = match st.db.lock() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let mut runs = match st.running.lock() {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    if runs.is_empty() {
+        return;
+    }
+    let now = now_ms();
+    if runs.values().any(|r| r.watch.is_some()) {
+        use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
+        sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::new().with_exe(UpdateKind::OnlyIfNotSet));
+    }
+    let remind_h = db.settings.get("breakReminder").and_then(|x| x.as_i64()).unwrap_or(0);
+    let mut ended: Vec<String> = vec![];
+    let mut deltas: Vec<(String, i64)> = vec![];
+    let mut notices: Vec<(String, i64)> = vec![];
+    let mut changed = false;
+    for (id, r) in runs.iter_mut() {
+        let mut alive = true;
+        let mut end_at = now;
+        if let Some(dir) = r.watch.clone() {
+            if now < r.next_check {
+                continue;
+            }
+            r.next_check = now + 4000;
+            let mut prefix = dir.to_string_lossy().to_lowercase();
+            if !prefix.ends_with('\\') {
+                prefix.push('\\');
+            }
+            let active = sys.processes().values().any(|p| p.exe().map(|e| path_under(e, &prefix)).unwrap_or(false));
+            if active {
+                if !r.seen {
+                    r.seen = true;
+                    r.start = now;
+                    r.last = now;
+                    changed = true;
+                }
+                r.last_seen = now;
+            } else if !r.seen {
+                alive = now - r.start < 240_000;
+            } else {
+                alive = now - r.last_seen < 12_000;
+                end_at = r.last_seen;
+            }
+        } else if let Some(c) = r.child.as_mut() {
+            alive = matches!(c.try_wait(), Ok(None));
+        }
+        // les lanceurs qui se relancent eux-mêmes quittent vite : on ignore moins de 15 s
+        if r.seen && end_at - r.start >= 15_000 {
+            let delta = (end_at - r.last) / 1000;
+            if delta >= 1 {
+                deltas.push((id.clone(), delta));
+                r.last += delta * 1000;
+            }
+        }
+        if alive && r.seen && remind_h > 0 {
+            let step = remind_h * 3_600_000;
+            if r.next_remind == 0 {
+                r.next_remind = r.start + step;
+            }
+            if now >= r.next_remind {
+                let hours = (((now - r.start) as f64) / 3_600_000.0).round().max(1.0) as i64;
+                while r.next_remind <= now {
+                    r.next_remind += step;
+                }
+                notices.push((id.clone(), hours));
+            }
+        }
+        if !alive {
+            ended.push(id.clone());
+        }
+    }
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let dirty = !deltas.is_empty();
+    for (id, d) in deltas {
+        if let Some(i) = find_game(&db, &id) {
+            let p = gn(&Value::Object(db.games[i].clone()), "playtime") + d;
+            db.games[i].insert("playtime".into(), json!(p));
+        }
+        let cur = db.daily.get(&today).and_then(|x| x.as_i64()).unwrap_or(0);
+        db.daily.insert(today.clone(), json!(cur + d));
+    }
+    if db.daily.len() > 400 {
+        let mut keys: Vec<String> = db.daily.keys().cloned().collect();
+        keys.sort();
+        for k in keys.iter().take(db.daily.len() - 400) {
+            db.daily.remove(k);
+        }
+    }
+    for (id, hours) in notices {
+        if let Some(i) = find_game(&db, &id) {
+            let name = gs(&Value::Object(db.games[i].clone()), "name");
+            if let Ok(mut n) = NOTICES.lock() {
+                n.push(json!({ "game": name, "hours": hours }));
+            }
+        }
+    }
+    for id in &ended {
+        runs.remove(id);
+        changed = true;
+    }
+    let last = LAST_SAVE.load(Ordering::Relaxed);
+    if (dirty && now - last >= 10_000) || !ended.is_empty() {
+        save(&st.dir, &db);
+        LAST_SAVE.store(now, Ordering::Relaxed);
+    }
+    if changed {
+        CHANGED.store(true, Ordering::Relaxed);
+    }
+}
+
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
     if name == "fetchCover" {
@@ -1524,6 +1939,16 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
     }
     if name == "refreshIcon" {
         return refresh_icon_cmd(&state, &body).await;
+    }
+    if name == "launch" {
+        return launch_cmd(&state, &app, &body).await;
+    }
+    if name == "detectLaunchers" {
+        let known: Vec<String> = {
+            let db = state.db.lock().map_err(|_| "verrou".to_string())?;
+            db.games.iter().map(|g| g.get("target").and_then(|x| x.as_str()).unwrap_or("").to_string()).collect()
+        };
+        return tauri::async_runtime::spawn_blocking(move || Ok(detect_launchers(&known))).await.map_err(|e| e.to_string())?;
     }
     if let Some(r) = dialog_call(&name, &body) {
         // pour le scan, on retire les jeux déjà présents
@@ -1539,6 +1964,13 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
     let mut db = state.db.lock().map_err(|_| "Verrou de la bibliothèque indisponible.".to_string())?;
     let res = handle(&state.dir, &mut db, &name, &body);
     drop(db);
+    let mut res = res;
+    if name == "library" {
+        if let (Ok(v), Ok(runs)) = (&mut res, state.running.lock()) {
+            let ids: Vec<Value> = runs.iter().filter(|(_, r)| r.watch.is_none() || r.seen).map(|(k, _)| json!(k)).collect();
+            v["running"] = Value::Array(ids);
+        }
+    }
     if name == "add" {
         spawn_icon_jobs(app);
     }
@@ -1567,7 +1999,7 @@ fn main() {
         log(&dir, &format!("Démarrage d'Arcade {} ({} jeux)", VERSION, db.games.len()));
     }
     tauri::Builder::default()
-        .manage(App { db: Mutex::new(db), dir })
+        .manage(App { db: Mutex::new(db), dir, running: Mutex::new(Default::default()) })
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
@@ -1613,6 +2045,14 @@ fn main() {
                     .build()?;
             } else {
                 spawn_icon_jobs(app.handle().clone());
+                let h = app.handle().clone();
+                std::thread::spawn(move || {
+                    let mut sys = sysinfo::System::new();
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        tick(&h, &mut sys);
+                    }
+                });
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
                     .title("Arcade")
                     .inner_size(1280.0, 820.0)

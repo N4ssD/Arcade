@@ -1012,7 +1012,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
-    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : plus besoin d\'Edge ni de PowerShell, Arcade est un seul fichier Arcade.exe.', 'Installeur intégré : tu choisis le dossier, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul et se déploie au survol.', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).', 'Bientôt : import Steam/Epic/GOG et temps de jeu en direct.'] },
+    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : plus besoin d\'Edge ni de PowerShell, Arcade est un seul fichier Arcade.exe.', 'Installeur intégré : tu choisis le dossier, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul et se déploie au survol.', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).', 'Temps de jeu en direct et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu (réglable).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
     { v: '1.17.0', title: 'Réinitialisation et installeur', items: ['Paramètres > Réinitialisation : remet Arcade à neuf (bibliothèque, catégories, statistiques, couvertures, réglages).', 'Arcade.exe : un vrai installeur avec choix du dossier, raccourcis Bureau et menu Démarrer, mise à jour et désinstallation.'] },
@@ -1758,6 +1758,7 @@
       ),
       h('div', { class: 'set-group' },
         h('h2', { text: 'Système' }),
+        switchRow('Réduire Arcade quand un jeu se lance', 'Arcade se réduit dans la barre des tâches pendant que tu joues, pour ne consommer aucune ressource.', 'minimizeOnLaunch'),
         switchRow('Lancer Arcade au démarrage de Windows', 'Arcade s\'ouvre tout seul quand tu allumes ton PC.', 'startWithWindows'),
         switchRow('Garder Arcade dans la zone de notification', 'Quand tu fermes la fenêtre, Arcade reste en arrière-plan (icône près de l\'horloge) : clique dessus pour le rouvrir. Avec le démarrage Windows, il démarre alors discrètement.', 'trayMode', (on) => {
           toast(on ? 'Arcade restera actif dans la zone de notification quand tu fermes la fenêtre.' : 'Arcade se fermera complètement avec sa fenêtre.', 'ok');

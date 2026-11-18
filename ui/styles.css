@@ -874,3 +874,6 @@ body.automenu.menu-open .sidebar { width: var(--side-w); background: var(--panel
 body.automenu.menu-open .brand-name, body.automenu.menu-open .nav-item span, body.automenu.menu-open .nav-item em,
 body.automenu.menu-open .btn.block span, body.automenu.menu-open .side-title { opacity: 1; transform: none; }
 body.automenu.menu-open .cats { overflow-x: visible; }
+
+/* Fenêtre réduite ou cachée : on fige toutes les animations */
+body.idle *, body.idle *::before, body.idle *::after { animation-play-state: paused !important; }

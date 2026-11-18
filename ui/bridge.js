@@ -49,6 +49,8 @@
       if (r.notices && r.notices.length && noticeCb) r.notices.forEach((n) => noticeCb(n));
     } catch {}
   };
-  beat();
-  setInterval(beat, 3000);
+  // Fenêtre réduite : on vérifie beaucoup moins souvent pour ne rien consommer
+  const loop = () => { beat(); setTimeout(loop, document.hidden ? 15000 : 3000); };
+  loop();
+  document.addEventListener('visibilitychange', () => document.body.classList.toggle('idle', document.hidden));
 })();
