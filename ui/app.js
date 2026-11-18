@@ -89,7 +89,7 @@
     if (days <= 0) return "Aujourd'hui";
     if (days === 1) return 'Hier';
     if (days < 30) return `Il y a ${days} j`;
-    return new Date(ts).toLocaleDateString('fr-FR');
+    return new Date(ts).toLocaleDateString(ARC.locale);
   }
   const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
 
@@ -710,7 +710,7 @@
     return h('div', { class: 'st-top' },
       live.length ? h('span', { class: 'st-live' }, h('i'), 'En cours : ' + live.join(', ')) : h('span', { class: 'st-upd', text: 'Aucun jeu en cours' }),
       h('span', { class: 'spacer' }),
-      h('span', { class: 'st-upd', text: 'Mis à jour à ' + new Date(statsUpdated).toLocaleTimeString('fr-FR') }),
+      h('span', { class: 'st-upd', text: 'Mis à jour à ' + new Date(statsUpdated).toLocaleTimeString(ARC.locale) }),
       h('button', { class: 'btn ghost', id: 'st-refresh', title: 'Actualiser les statistiques', 'data-snd': 'none', onClick: () => refreshStats(true) },
         h('span', { class: 'ico-r' }), 'Actualiser'));
   }
@@ -742,9 +742,9 @@
       return;
     }
     const mx = Math.max(1, ...days.map((x) => x.sec));
-    const bars = h('div', { class: 'st-bars' }, ...days.map((x, i) => h('div', { class: 'st-bar' + (i === 13 ? ' today' : ''), title: `${x.d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} : ${fmtHours(x.sec)}` },
+    const bars = h('div', { class: 'st-bars' }, ...days.map((x, i) => h('div', { class: 'st-bar' + (i === 13 ? ' today' : ''), title: `${x.d.toLocaleDateString(ARC.locale, { weekday: 'long', day: 'numeric', month: 'long' })} : ${fmtHours(x.sec)}` },
       h('div', { class: 'st-col' }, h('i', { style: { height: x.sec ? Math.max(4, Math.round(x.sec / mx * 100)) + '%' : '0%' } })),
-      h('span', { text: x.d.toLocaleDateString('fr-FR', { weekday: 'short' }).slice(0, 3) }))));
+      h('span', { text: x.d.toLocaleDateString(ARC.locale, { weekday: 'short' }).slice(0, 3) }))));
     const delta = prevWeek ? Math.round((week - prevWeek) / prevWeek * 100) : null;
     const top = [...games].filter((g) => g.playtime >= 60).sort((a, b) => b.playtime - a.playtime).slice(0, 8);
     const topMax = top[0]?.playtime || 1;
@@ -783,12 +783,12 @@
   // ---------- Page de détail d'un jeu ----------
   function fmtDate(ts) {
     if (!ts || ts < 1e11) return '—';
-    return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(ts).toLocaleDateString(ARC.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
   function fmtLastLong(ts) {
     if (!ts) return 'Jamais';
     const rel = fmtLast(ts);
-    const hm = new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const hm = new Date(ts).toLocaleTimeString(ARC.locale, { hour: '2-digit', minute: '2-digit' });
     return rel === "Aujourd'hui" || rel === 'Hier' ? `${rel} à ${hm}` : fmtDate(ts);
   }
 
@@ -988,7 +988,7 @@
       }
     } finally { achBusy = false; updateAchCount(); }
   }
-  const achFmt = (a, v) => a.unit === 'h' ? (Math.floor(v / 360) / 10).toString().replace('.', ',') : String(Math.floor(v));
+  const achFmt = (a, v) => a.unit === 'h' ? (Math.floor(v / 360) / 10).toString().replace('.', ARC.decimal) : String(Math.floor(v));
   function openAch() {
     const st = achStats(), done = achDone();
     const total = ACH.length, got = ACH.filter((a) => done[a.id]).length;
@@ -1012,7 +1012,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
-    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : plus besoin d\'Edge ni de PowerShell, Arcade est un seul fichier Arcade.exe.', 'Installeur intégré : tu choisis le dossier, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul et se déploie au survol.', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Bientôt : import Steam/Epic/GOG et temps de jeu en direct.'] },
+    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : plus besoin d\'Edge ni de PowerShell, Arcade est un seul fichier Arcade.exe.', 'Installeur intégré : tu choisis le dossier, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul et se déploie au survol.', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).', 'Bientôt : import Steam/Epic/GOG et temps de jeu en direct.'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
     { v: '1.17.0', title: 'Réinitialisation et installeur', items: ['Paramètres > Réinitialisation : remet Arcade à neuf (bibliothèque, catégories, statistiques, couvertures, réglages).', 'Arcade.exe : un vrai installeur avec choix du dossier, raccourcis Bureau et menu Démarrer, mise à jour et désinstallation.'] },
@@ -1606,6 +1606,12 @@
       h('span', { class: 'switch' }, input, h('i')));
   }
 
+  function langRow() {
+    const opts = [['fr', 'Français'], ['en', 'English']];
+    const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b' + (ARC.lang === v ? ' on' : ''), 'data-snd': 'none', text: t, onClick: () => { if (ARC.lang !== v) ARC.set(v); } }));
+    return h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Langue' }), h('small', { text: 'Choisis la langue de l\'interface.' })), h('div', { class: 'seg' }, ...btns));
+  }
+
   function themeRow() {
     const opts = [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']];
     const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
@@ -1733,6 +1739,7 @@
       ),
       h('div', { class: 'set-group' },
         h('h2', { text: 'Apparence' }),
+        langRow(),
         themeRow(),
         autoMenuRow(),
         accentRow(),

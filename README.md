@@ -8,6 +8,7 @@ Un lanceur de jeux moderne pour Windows, en français : ta bibliothèque, tes st
 - Bibliothèque avec pochettes HD automatiques (Steam), icônes des jeux, catégories, favoris, recherche et tri
 - Ajout par **glisser-déposer** (raccourcis `.lnk` / `.url`, `.exe`), par sélecteur de fichier ou par scan d'un dossier
 - Rangée **Reprendre**, bouton **Surprends-moi**, zoom précis des cases
+- **Français et English** au choix (Paramètres > Apparence)
 - **Menu automatique** : il se réduit tout seul et se déploie au survol
 - **18 succès** à débloquer, historique des **nouveautés** par version
 - Thèmes, couleur d'accent et logo personnalisables ; réglages **Performance** pour couper animations et effets

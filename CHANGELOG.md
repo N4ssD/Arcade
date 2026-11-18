@@ -3,6 +3,7 @@
 ## 2.0.0 — Arcade devient une vraie application
 - Réécriture en Rust (Tauri) : un seul `Arcade.exe`, sans Edge ni PowerShell.
 - Installeur intégré avec choix du dossier ; les données sont rangées dans le sous-dossier `data`.
+- Choix de la langue : français ou anglais (Paramètres > Apparence).
 - Menu automatique (réduit, déployé au survol), glisser-déposer de raccourcis et de `.exe`.
 - Pas encore porté : import Steam/Epic/GOG, temps de jeu en direct, démarrage avec Windows, zone de notification (l'ancienne version reste dans la branche `powershell-1.19`).
 
