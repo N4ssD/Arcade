@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.3.6';
+  const APP_VERSION = '2.3.7';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1093,6 +1093,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.3.7', title: 'Menu replié', items: ['Le séparateur en points sous les paramètres est retiré (celui entre Statistiques et les catégories reste).'] },
     { v: '2.3.6', title: 'Séparateurs en points', items: ['Menu replié : les lignes sont remplacées par trois petits points discrets, centrés entre les groupes d\'icônes.', 'Mise à jour : Arcade compare maintenant avec la version réellement publiée, il ne te propose plus une mise à jour qui n\'est pas encore compilée.'] },
     { v: '2.3.5', title: 'Séparateurs recentrés', items: ['Menu replié : les deux séparateurs sont maintenant exactement au milieu entre les icônes (ils suivent aussi automatiquement l\'ajout de catégories).'] },
     { v: '2.3.4', title: 'Séparateurs du menu', items: ['Menu replié : les séparateurs sont des lignes fines qui s\'estompent aux extrémités, centrées, avec le même espace au-dessus et au-dessous.'] },

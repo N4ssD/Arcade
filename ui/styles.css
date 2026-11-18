@@ -927,5 +927,4 @@ body.collapsed:not(.menu-open) .perf-chip { justify-content: center; padding: 8p
 .side-title { margin: 0 12px; padding: 22px 0 10px; position: relative; }
 body.collapsed:not(.menu-open) #cat-title:not([hidden])::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; border-radius: 50%; transform: translate(-50%, -50%); background: color-mix(in srgb, var(--accent) 55%, #5a5a70); box-shadow: -10px 0 0 -1px #4a4a5c, 10px 0 0 -1px #4a4a5c; }
 body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 9px; }
-body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; border-radius: 50%; transform: translateX(-50%); background: color-mix(in srgb, var(--accent) 55%, #5a5a70); box-shadow: -10px 0 0 -1px #4a4a5c, 10px 0 0 -1px #4a4a5c; }
 body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: transparent; }
