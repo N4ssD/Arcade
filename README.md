@@ -45,7 +45,7 @@ Compilation locale (Linux/macOS/WSL avec Go 1.24+ et Python 3) :
 ```bash
 cd installer
 cp -r ../app ./app
-python3 gen_syso.py "$(grep -m1 -oP '\$script:Version\s*=\s*\x27\K[^\x27]+' ../app/Arcade.ps1 | tr -d '\r')\"
+python3 gen_syso.py "$(grep -m1 -oP '\$script:Version\s*=\s*\x27\K[^\x27]+' ../app/Arcade.ps1 | tr -d '\r')"
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -H=windowsgui" -o ../dist/Arcade.exe .
 ```
 
