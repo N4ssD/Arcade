@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.11.2 — Cursor size
+- The pixel cursor is smaller by default and you can pick its size: Small, Medium or Large (Settings > Appearance).
+
 ## 2.11.1 — While you play
 - When a game launches, the music stops and Arcade hides from the desktop: it stays in the notification area, one click on its icon reopens it.
 - Arcade reopens by itself when the game closes and the music resumes.

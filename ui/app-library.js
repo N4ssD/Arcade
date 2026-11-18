@@ -329,8 +329,9 @@ function logoCols(hex) {
 const CUR_ARROW = ['X...........', 'XX..........', 'XOX.........', 'XOOX........', 'XOOOX.......', 'XOOOOX......', 'XOOOOOX.....', 'XOOOOOOX....', 'XOOOOOOOX...', 'XOOOOOOOOX..', 'XOOOOOXXXXX.', 'XOOXOOX.....', 'XOX.XOOX....', 'XX..XOOX....', 'X....XOOX...', '.....XOOX...', '......XX....'];
 const CUR_HAND = ['....XX........', '...XOOX.......', '...XOOX.......', '...XOOX.......', '...XOOXXX.....', '...XOOXOOXX...', 'XX.XOOXOOXOOX.', 'XOXXOOOOOOOOOX', 'XOOXOOOOOOOOOX', '.XOOOOOOOOOOOX', '.XOOOOOOOOOOOX', '..XOOOOOOOOOX.', '..XOOOOOOOOOX.', '...XOOOOOOOX..', '...XOOOOOOOX..', '...XXXXXXXXX..'];
 let curColor = '#9c7cf0';
+const CUR_PX = { 1: 1, 2: 1.5, 3: 2 }; // Petit / Moyen / Grand
 function curUrl(bm, fill) {
-  const px = 2, w = bm[0].length * px, h = bm.length * px;
+  const px = CUR_PX[state.settings.cursorSize] || 1, w = bm[0].length * px, h = bm.length * px;
   let r = '';
   bm.forEach((row, y) => [...row].forEach((c, x) => { if (c !== '.') r += `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${c === 'X' ? '#121218' : fill}"/>`; }));
   return 'url("data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" shape-rendering="crispEdges">${r}</svg>`) + '")';

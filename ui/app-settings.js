@@ -37,6 +37,18 @@ function langRow() {
   return h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Langue' }), h('small', { text: 'Choisis la langue de l\'interface.' })), h('div', { class: 'seg' }, ...btns));
 }
 
+function cursorSizeRow() {
+  const opts = [[1, 'Petit'], [2, 'Moyen'], [3, 'Grand']];
+  const cur = () => state.settings.cursorSize || 1;
+  const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
+    state.settings.cursorSize = v; sync(); applyCursor(); Sound.play('tick');
+    try { await api.setSettings({ cursorSize: v }); } catch (e) { toast(e.message || String(e), 'error'); }
+  } }));
+  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', cur() === opts[i][0]));
+  sync();
+  return h('div', { class: 'setting', id: 'row-cursorSize' }, h('div', { class: 'setting-text' }, h('b', { text: 'Taille du curseur' }), h('small', { text: 'Petit, moyen ou grand.' })), h('div', { class: 'seg' }, ...btns));
+}
+
 function themeRow() {
   const opts = [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']];
   const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
@@ -174,7 +186,8 @@ function renderSettings() {
     ),
     h('div', { class: 'set-group' },
       h('h2', { text: 'Apparence' }),
-      switchRow('Curseur en pixels', 'Remplace la flèche de la souris par un curseur pixel à ta couleur d\'accent, dans la fenêtre d\'Arcade seulement.', 'cursor', () => applyCursor()),
+      switchRow('Curseur en pixels', 'Remplace la flèche de la souris par un curseur pixel à ta couleur d\'accent, dans la fenêtre d\'Arcade seulement.', 'cursor', (on) => { applyCursor(); const r = $('#row-cursorSize'); if (r) r.classList.toggle('disabled', !on); }),
+      cursorSizeRow(),
       langRow(),
       themeRow(),
       autoMenuRow(),

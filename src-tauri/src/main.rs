@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-pub(crate) const VERSION: &str = "2.11.1";
+pub(crate) const VERSION: &str = "2.11.2";
 pub(crate) const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 pub(crate) const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",

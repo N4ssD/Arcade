@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.11.2', title: 'Taille du curseur', items: ['Le curseur en pixels est plus petit par défaut, et tu peux choisir sa taille : Petit, Moyen ou Grand (Paramètres > Apparence).'] },
   { v: '2.11.1', title: 'Pendant que tu joues', items: ['Au lancement d\'un jeu, la musique se coupe et Arcade se cache du bureau : il reste dans la zone de notification, un clic sur son icône le rouvre.', 'Arcade se rouvre tout seul à la fermeture du jeu et la musique reprend.'] },
   { v: '2.11.0', title: 'Curseur en pixels', items: ['Nouveau : un curseur en pixels (flèche + main au survol des boutons et des jeux) à ta couleur d\'accent. Il ne s\'applique que dans la fenêtre d\'Arcade.', 'Paramètres > Apparence > « Curseur en pixels » pour le désactiver.'] },
   { v: '2.10.1', title: 'Musique plus rapide', items: ['La musique d\'ambiance démarre dès la fin du chargement, sans attendre un clic, et monte plus vite.'] },
