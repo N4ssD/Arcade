@@ -168,8 +168,9 @@
     document.body.classList.toggle('collapsed', c);
     const label = c ? 'Agrandir le menu' : 'Réduire le menu (Ctrl+B)';
     $('#btn-collapse').title = label;
-    $('#btn-brand').title = c ? 'Agrandir le menu' : 'Arcade';
-    $('#btn-brand').setAttribute('aria-label', c ? 'Agrandir le menu' : 'Arcade');
+    const tip = auto ? 'Menu automatique — clique pour le garder déplié' : c ? 'Menu fermé en permanence — clique pour le mode automatique' : 'Menu déplié en permanence — clique pour le garder fermé';
+    $('#btn-brand').title = tip;
+    $('#btn-brand').setAttribute('aria-label', tip);
     $('#btn-collapse svg').style.transform = c ? 'rotate(180deg)' : '';
     // pas d'animation au tout premier affichage
     if (document.body.classList.contains('preload')) requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('preload')));
@@ -1012,7 +1013,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
-    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu (réglable).', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
+    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu, et se rouvre tout seul quand le jeu se ferme.', 'Un clic sur le logo change le mode du menu : automatique, déplié en permanence ou fermé en permanence.', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
     { v: '1.17.0', title: 'Réinitialisation et installeur', items: ['Paramètres > Réinitialisation : remet Arcade à neuf (bibliothèque, catégories, statistiques, couvertures, réglages).', 'Arcade.exe : un vrai installeur avec choix du dossier, raccourcis Bureau et menu Démarrer, mise à jour et désinstallation.'] },
@@ -1800,7 +1801,15 @@
   })();
   $('#btn-cats').addEventListener('click', openCatsModal);
   $('#btn-full').addEventListener('click', toggleFullscreen);
-  $('#btn-brand').addEventListener('click', () => { if (state.settings.sidebarCollapsed) toggleSidebar(); });
+  // Logo : change le mode du menu — automatique → déplié en permanence → fermé en permanence → automatique
+  $('#btn-brand').addEventListener('click', () => {
+    const setAuto = (v) => { try { localStorage.setItem('arcade.autoMenu', v ? '1' : '0'); } catch {} };
+    Sound.play('pop');
+    if (autoMenu()) { state.settings.sidebarCollapsed = true; setAuto(false); toggleSidebar(); }
+    else if (!state.settings.sidebarCollapsed) toggleSidebar();
+    else { setAuto(true); applySidebar(); }
+    if (document.getElementById('row-autoMenu')) { const i = document.querySelector('#row-autoMenu input'); if (i) i.checked = autoMenu(); }
+  });
   $('#btn-add').addEventListener('click', () => openGameModal(null));
   $('#btn-add-empty').addEventListener('click', () => openGameModal(null));
   $('#btn-scan').addEventListener('click', () => scanFlow());

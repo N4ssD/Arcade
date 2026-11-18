@@ -1981,6 +1981,8 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
         runs.remove(id);
         changed = true;
     }
+    // Le dernier jeu suivi vient de se fermer : Arcade se rouvre (il s'était réduit au lancement)
+    let reopen = !ended.is_empty() && runs.is_empty() && db.settings.get("minimizeOnLaunch").and_then(|x| x.as_bool()).unwrap_or(true);
     let last = LAST_SAVE.load(Ordering::Relaxed);
     if (dirty && now - last >= 10_000) || !ended.is_empty() {
         save(&st.dir, &db);
@@ -1988,6 +1990,14 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
     }
     if changed {
         CHANGED.store(true, Ordering::Relaxed);
+    }
+    if reopen {
+        drop(runs);
+        drop(db);
+        let hidden = app.get_webview_window("main").map(|w| w.is_minimized().unwrap_or(false) || !w.is_visible().unwrap_or(true)).unwrap_or(false);
+        if hidden {
+            show_main(app);
+        }
     }
 }
 
