@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.3.7";
+const VERSION: &str = "2.4.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -202,7 +202,8 @@ fn default_settings() -> Obj {
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
-        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false
+        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false,
+        "avatarOn": true, "avatarPanel": true, "avatar": {}
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -266,8 +267,35 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
                 settings.insert(k.into(), Value::Object(cur));
             }
         }
+        "avatar" => {
+            // Avatar : petit dictionnaire (chaînes courtes, nombres, liste d'objets possédés), nettoyé champ par champ
+            if let Some(o) = v.as_object() {
+                let mut out = Obj::new();
+                for (key, val) in o.iter().take(40) {
+                    if key.is_empty() || key.len() > 20 || !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                        continue;
+                    }
+                    match val {
+                        Value::String(t) => {
+                            out.insert(key.clone(), json!(limit(t, 24)));
+                        }
+                        Value::Number(n) => {
+                            if let Some(x) = n.as_i64() {
+                                out.insert(key.clone(), json!(x.clamp(0, 10_000_000)));
+                            }
+                        }
+                        Value::Array(a) => {
+                            let list: Vec<Value> = a.iter().filter_map(|x| x.as_str()).filter(|t| !t.is_empty() && t.len() <= 24).take(200).map(|t| json!(t)).collect();
+                            out.insert(key.clone(), Value::Array(list));
+                        }
+                        _ => {}
+                    }
+                }
+                settings.insert(k.into(), Value::Object(out));
+            }
+        }
         "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
-        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" => {
+        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" | "avatarOn" | "avatarPanel" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));
             }

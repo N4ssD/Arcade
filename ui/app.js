@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.3.7';
+  const APP_VERSION = '2.4.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -464,6 +464,7 @@
 
     const isSettings = state.view === 'settings', isStats = state.view === 'stats';
     const isPage = isSettings || isStats;
+    renderAvatar();
     $('.toolbar').hidden = isPage;
     $('#grid').hidden = isPage;
     $('#settings').hidden = !isSettings;
@@ -1091,8 +1092,132 @@
   }
   setInterval(() => { if (!document.hidden) api.getLibrary().then((lib) => { state.games = lib.games; state.daily = lib.daily || {}; evalAchievements(); }).catch(() => {}); }, 30000);
 
+  // ---------- Avatar (personnage, niveau, pièces, éditeur) ----------
+  const AV = window.ARCAV;
+  const avOn = () => !!AV && state.settings.avatarOn !== false;
+  const avData = () => AV.sanitize(state.settings.avatar);
+  function avStats() { const st = achStats(); return AV.progress(st.sec, Object.keys(achDone()).length); }
+  const avCoins = (a) => Math.max(0, avStats().earned - a.spent);
+  function svgNode(str) { const t = document.createElement('template'); t.innerHTML = str; return t.content.firstChild; } // str vient de ARCAV.svg (valeurs validées)
+  let avMsgIdx = 0;
+  function avatarSays() {
+    const games = state.games || [], now = Date.now(), msgs = [];
+    const hour = new Date().getHours();
+    if (!games.length) return ['Ajoute ton premier jeu, je t\'attends !'];
+    if (state.running && state.running.size) return ['Bon jeu ! Je garde la place au chaud.', 'Amuse-toi bien, je t\'attends ici.'];
+    const idle = games.filter((g) => g.lastPlayed && g.playtime > 3600 && now - g.lastPlayed > 3 * 86400000).sort((a, b) => b.playtime - a.playtime)[0];
+    if (idle) msgs.push('Ça fait ' + Math.floor((now - idle.lastPlayed) / 86400000) + ' jours que tu n\'as pas relancé ' + idle.name + '.');
+    const st = achStats();
+    if (st.streak >= 3) msgs.push('Tu as joué ' + st.streak + ' jours d\'affilée, bravo !');
+    const a = avData(), coins = avCoins(a);
+    const wish = Object.values(AV.ITEMS).flat().filter((i) => i.price && !a.owned.includes(i.id)).sort((x, y) => x.price - y.price)[0];
+    if (wish && coins >= wish.price) msgs.push('Tu as ' + coins + ' pièces : va voir les nouveaux objets !');
+    const fav = games.filter((g) => g.favorite)[0];
+    if (fav) msgs.push('Et si on relançait ' + fav.name + ' ?');
+    msgs.push(hour >= 18 || hour < 5 ? 'Bonsoir ! Prêt pour une partie ?' : hour < 12 ? 'Bonjour ! Qu\'est-ce qu\'on joue aujourd\'hui ?' : 'Salut ! Une petite partie ?');
+    return msgs;
+  }
+  function renderAvatar() {
+    const on = avOn();
+    const navBtn = $('#btn-avatar'), panel = $('#av-panel');
+    if (!navBtn || !panel) return;
+    navBtn.hidden = !on;
+    const lib = !(state.view === 'settings' || state.view === 'stats');
+    const open = on && lib && state.settings.avatarPanel !== false && innerWidth >= 1100;
+    document.body.classList.toggle('av-open', open);
+    panel.hidden = !open;
+    if (!on) return;
+    const a = avData(), pr = avStats();
+    navBtn.querySelector('.av-ic').replaceChildren(svgNode(AV.svg(a, 'head', 22)));
+    $('#av-lv').textContent = 'Niv. ' + pr.level;
+    if (!open) return;
+    const msgs = avatarSays(), msg = msgs[avMsgIdx % msgs.length];
+    const bg = AV.BGS[a.bg] || AV.BGS.b0;
+    panel.style.setProperty('--bg1', bg[0]); panel.style.setProperty('--bg2', bg[1]);
+    panel.replaceChildren(
+      h('div', { class: 'av-head' }, h('b', { text: 'Mon avatar' }),
+        h('button', { class: 'av-x', title: 'Masquer le panneau', 'aria-label': 'Masquer le panneau', 'data-snd': 'none', text: '›', onClick: () => { setSetting({ avatarPanel: false }); renderAvatar(); } })),
+      h('div', { class: 'av-stage' },
+        h('div', { class: 'av-bubble', text: msg }),
+        h('button', { class: 'av-char', title: 'Clique pour me parler', 'data-snd': 'none', onClick: (e) => { avMsgIdx++; renderAvatar(); const c = $('#av-panel .av-char'); if (c) c.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-8px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); } }, svgNode(AV.svg(a, 'full', 150)))),
+      h('div', { class: 'av-lvl' }, h('span', { text: 'Niv. ' + pr.level }), h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(3, Math.round(pr.pct * 100)) + '%' } }))),
+      h('div', { class: 'av-foot' }, h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), String(avCoins(a))),
+        h('button', { class: 'btn primary', text: 'Personnaliser', onClick: openAvatarEditor })));
+  }
+  function toggleAvatarPanel() {
+    if (state.view === 'settings' || state.view === 'stats') { setView('all'); setSetting({ avatarPanel: true }); renderAvatar(); return; }
+    setSetting({ avatarPanel: state.settings.avatarPanel === false }); renderAvatar();
+  }
+
+  const AV_CATS = [
+    { id: 'skin', n: 'Peau', col: ['skin', 'SKINS'] },
+    { id: 'hair', n: 'Cheveux', key: 'hs', view: 'head', col: ['hair', 'HAIRS'] },
+    { id: 'face', n: 'Visage', key: 'face', view: 'head' },
+    { id: 'top', n: 'Haut', key: 'top', view: 'top', col: ['topC', 'CLOTHES'] },
+    { id: 'bottom', n: 'Bas', key: 'bottom', view: 'bottom', col: ['bottomC', 'BOTTOMS'] },
+    { id: 'shoes', n: 'Chaussures', key: 'shoes', view: 'shoes', col: ['shoesC', 'SHOES'] },
+    { id: 'acc', n: 'Accessoires', key: 'acc', view: 'head' },
+    { id: 'bg', n: 'Fond', key: 'bg' },
+  ];
+  function openAvatarEditor() {
+    let d = avData(), cat = 'top';
+    const done = achDone(), earned = avStats().earned;
+    const coins = () => Math.max(0, earned - d.spent);
+    const unlocked = (it) => (!it.price && !it.ach) || d.owned.includes(it.id) || (it.ach && !!done[it.ach]);
+    const prev = h('div', { class: 'av-prev' }), side = h('div', { class: 'av-cats' }), pane = h('div', { class: 'av-pane' }), coinEl = h('span', { class: 'av-coins big' });
+    function pick(c, it) {
+      if (!unlocked(it)) {
+        if (it.ach) return toast('Verrouillé : ' + it.need + ' pour le débloquer.');
+        if (coins() < it.price) return toast('Il te manque ' + (it.price - coins()) + ' pièces pour « ' + it.n + ' ».');
+        d.spent += it.price; d.owned = [...d.owned, it.id]; Sound.play('success'); toast('Acheté : ' + it.n, 'ok');
+      } else Sound.play('tick');
+      d[c.key] = it.id; paint();
+    }
+    function paint() {
+      const bg = AV.BGS[d.bg] || AV.BGS.b0;
+      prev.style.setProperty('--bg1', bg[0]); prev.style.setProperty('--bg2', bg[1]);
+      prev.replaceChildren(svgNode(AV.svg(d, 'full', 230)), h('div', { class: 'av-prev-acts' },
+        h('button', { class: 'btn ghost', text: 'Aléatoire', 'data-snd': 'none', onClick: () => {
+          const r = (arr) => arr[Math.floor(Math.random() * arr.length)];
+          const ok = (cat) => AV.ITEMS[cat].filter(unlocked).map((i) => i.id);
+          d = { ...d, skin: r(AV.SKINS), hair: r(AV.HAIRS), hs: r(ok('hair')), face: r(ok('face')), top: r(ok('top')), topC: r(AV.CLOTHES), bottom: r(ok('bottom')), bottomC: r(AV.BOTTOMS), shoes: r(ok('shoes')), shoesC: r(AV.SHOES), acc: r(ok('acc')), bg: r(ok('bg')) };
+          Sound.play('pop'); paint();
+        } }),
+        h('button', { class: 'btn ghost', text: 'Réinitialiser', 'data-snd': 'none', onClick: () => { d = { ...AV.sanitize({}), owned: d.owned, spent: d.spent }; paint(); } })));
+      coinEl.replaceChildren(h('i', { class: 'av-coin' }), coins() + ' pièces');
+      side.replaceChildren(...AV_CATS.map((c) => h('button', { class: 'av-cat' + (c.id === cat ? ' on' : ''), 'data-snd': 'nav', text: c.n, onClick: () => { cat = c.id; paint(); } })));
+      const c = AV_CATS.find((x) => x.id === cat);
+      const kids = [h('div', { class: 'av-lab', text: c.n })];
+      if (c.key) kids.push(h('div', { class: 'av-items' }, AV.ITEMS[c.id === 'bg' ? 'bg' : c.id].map((it) => {
+        const un = unlocked(it), sel = d[c.key] === it.id;
+        const thumb = c.id === 'bg' ? h('i', { class: 'av-bgthumb', style: { background: 'linear-gradient(160deg,' + AV.BGS[it.id][0] + ',' + AV.BGS[it.id][1] + ')' } }) : svgNode(AV.svg({ ...d, [c.key]: it.id }, c.view, c.view === 'head' ? 70 : 76));
+        const tag = sel ? h('span', { class: 'av-tag own', text: 'Porté' }) : un ? h('span', { class: 'av-tag own', text: 'Possédé' })
+          : it.ach ? h('span', { class: 'av-tag ach', text: '🔒 ' + it.need }) : h('span', { class: 'av-tag buy' }, h('i', { class: 'av-coin' }), String(it.price));
+        return h('button', { class: 'av-item' + (sel ? ' on' : '') + (un ? '' : ' lock'), title: it.n, 'data-snd': 'none', onClick: () => pick(c, it) }, h('span', { class: 'av-thumb' }, thumb), h('b', { text: it.n }), tag);
+      })));
+      if (c.col) {
+        kids.push(h('div', { class: 'av-lab', text: 'Couleur' }), h('div', { class: 'av-sw' }, AV[c.col[1]].map((col) =>
+          h('button', { class: 'av-col' + (d[c.col[0]] === col ? ' on' : ''), style: { '--c': col }, 'aria-label': col, 'data-snd': 'tick', onClick: () => { d[c.col[0]] = col; paint(); } }))));
+      }
+      kids.push(h('p', { class: 'av-help', text: 'Les pièces se gagnent en jouant (1 par heure) et en débloquant des succès (10 chacun). Certains objets se débloquent avec un succès.' }));
+      pane.replaceChildren(...kids);
+    }
+    paint();
+    openModal(h('div', { class: 'modal av-modal' },
+      h('div', { class: 'av-mh' }, h('h3', { text: 'Mon avatar' }), h('small', { text: 'Niveau ' + avStats().level }), h('span', { style: { flex: 1 } }), coinEl),
+      h('div', { class: 'av-body' }, side, prev, pane),
+      h('div', { class: 'modal-foot' },
+        h('button', { class: 'btn', text: 'Annuler', onClick: closeModal }),
+        h('button', { class: 'btn primary', text: 'Enregistrer', onClick: async () => {
+          try { await setSetting({ avatar: d }); closeModal(); renderAvatar(); toast('Avatar enregistré.', 'ok'); } catch (e) { toast(e.message || String(e), 'error'); }
+        } }))));
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#btn-avatar')) toggleAvatarPanel(); });
+  addEventListener('resize', () => { if (booted) renderAvatar(); });
+
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.4.0', title: 'Ton avatar', items: ['Nouveau : un personnage en pixels qui te représente, avec un niveau (selon ton temps de jeu et tes succès) et des pièces à dépenser.', 'Panneau à droite de la bibliothèque : l\'avatar te parle de tes jeux (ça fait X jours que tu n\'as pas relancé…). Clique dessus pour changer de phrase, sur la flèche pour masquer le panneau.', 'Éditeur « Personnaliser » : peau, cheveux, visage, haut, bas, chaussures, accessoires et fond, avec des couleurs et des objets à acheter ou à débloquer avec des succès.', 'Tu n\'aimes pas ? Paramètres > Apparence > Avatar le désactive complètement.'] },
     { v: '2.3.7', title: 'Menu replié', items: ['Le séparateur en points sous les paramètres est retiré (celui entre Statistiques et les catégories reste).'] },
     { v: '2.3.6', title: 'Séparateurs en points', items: ['Menu replié : les lignes sont remplacées par trois petits points discrets, centrés entre les groupes d\'icônes.', 'Mise à jour : Arcade compare maintenant avec la version réellement publiée, il ne te propose plus une mise à jour qui n\'est pas encore compilée.'] },
     { v: '2.3.5', title: 'Séparateurs recentrés', items: ['Menu replié : les deux séparateurs sont maintenant exactement au milieu entre les icônes (ils suivent aussi automatiquement l\'ajout de catégories).'] },
@@ -1886,6 +2011,7 @@
         langRow(),
         themeRow(),
         autoMenuRow(),
+        AV ? switchRow('Avatar', 'Affiche ton personnage (menu et panneau à droite de la bibliothèque), son niveau et sa boutique. Désactive-le pour retrouver Arcade sans avatar.', 'avatarOn', () => renderAvatar()) : null,
         accentRow(),
         logoRow(),
         switchRow('Fond animé', 'Grille pixel, lueurs et petits pixels qui scintillent derrière le lanceur (comme à l\'écran de chargement).', 'bgfx', () => applyAppearance()),

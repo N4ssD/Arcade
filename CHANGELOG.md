@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0 — Your avatar
+- New: a pixel-art character that represents you, with a level (from play time and achievements) and coins to spend.
+- A panel beside the library: the avatar talks about your games ("it's been 3 days since you played…"). Click it for another line, click the arrow to hide the panel.
+- "Customize" editor: skin, hair, face, top, bottom, shoes, accessories and background, with colors and items to buy with coins or unlock with achievements.
+- Optional: Settings > Appearance > Avatar turns it off completely.
+
 ## 2.3.7 — Collapsed menu
 - Removed the dot separator under Settings (the one between Statistics and the categories stays).
 

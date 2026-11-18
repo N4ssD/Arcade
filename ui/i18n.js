@@ -238,12 +238,35 @@
     'Tu peux le retrouver avec son raccourci.': 'You can find it with its shortcut.',
     'Dossier d\'installation invalide.': 'Invalid installation folder.', 'Choisis un dossier, pas la racine d\'un disque.': 'Choose a folder, not the root of a drive.', 'Choisis un dossier en dehors de Windows.': 'Choose a folder outside Windows.',
     'L\'installeur ne répond plus.': 'The installer is not responding.', 'Erreur inconnue.': 'Unknown error.',
+    // --- avatar ---
+    'Mon avatar': 'My avatar', 'Personnaliser': 'Customize', 'Masquer le panneau': 'Hide panel', 'Clique pour me parler': 'Click to talk to me',
+    'Avatar': 'Avatar', 'Aléatoire': 'Random', 'Réinitialiser': 'Reset', 'Annuler': 'Cancel', 'Enregistrer': 'Save', 'Avatar enregistré.': 'Avatar saved.',
+    'Peau': 'Skin', 'Cheveux': 'Hair', 'Visage': 'Face', 'Haut': 'Top', 'Bas': 'Bottom', 'Chaussures': 'Shoes', 'Accessoires': 'Accessories', 'Fond': 'Background', 'Couleur': 'Color',
+    'Court': 'Short', 'Long': 'Long', 'Frange': 'Fringe', 'Pointes': 'Spikes', 'Sourire': 'Smile', 'Heureux': 'Happy', 'Sérieux': 'Serious', 'Surpris': 'Surprised',
+    'Sweat': 'Hoodie', 'T-shirt': 'T-shirt', 'Veste': 'Jacket', 'Marinière': 'Striped tee', 'Étoilé': 'Starry', 'Centurion': 'Centurion', 'Flamme': 'Flame',
+    'Pantalon': 'Pants', 'Short': 'Shorts', 'Baskets': 'Sneakers', 'Bottes': 'Boots', 'Aucun': 'None', 'Casque': 'Headphones', 'Lunettes': 'Glasses', 'Casquette': 'Cap', 'Couronne': 'Crown',
+    'Violet': 'Purple', 'Nuit': 'Night', 'Aurore': 'Dawn', 'Couchant': 'Sunset', 'Néon': 'Neon', 'Porté': 'Worn', 'Possédé': 'Owned',
+    'Les pièces se gagnent en jouant (1 par heure) et en débloquant des succès (10 chacun). Certains objets se débloquent avec un succès.': 'Coins are earned by playing (1 per hour) and by unlocking achievements (10 each). Some items unlock with an achievement.',
+    'Affiche ton personnage (menu et panneau à droite de la bibliothèque), son niveau et sa boutique. Désactive-le pour retrouver Arcade sans avatar.': 'Shows your character (menu and panel beside the library), its level and shop. Turn it off to get Arcade back without an avatar.',
+    'Ajoute ton premier jeu, je t\'attends !': 'Add your first game, I\'m waiting!', 'Bon jeu ! Je garde la place au chaud.': 'Have fun! I\'ll keep your seat warm.', 'Amuse-toi bien, je t\'attends ici.': 'Enjoy, I\'ll wait right here.',
+    'Bonsoir ! Prêt pour une partie ?': 'Good evening! Ready for a game?', 'Bonjour ! Qu\'est-ce qu\'on joue aujourd\'hui ?': 'Good morning! What are we playing today?', 'Salut ! Une petite partie ?': 'Hi! How about a quick game?',
   };
 
   // Textes avec des valeurs variables
   const pl = (n, one, many) => (Number(n) > 1 ? many : one);
   const UNITS = { 'jeu': 'game', 'jeux': 'games', 'jours': 'days', 'lancements': 'launches', 'favoris': 'favorites', 'terminé': 'finished', 'terminés': 'finished', 'catégories': 'categories', 'h': 'h' };
   const RULES = [
+    [/^Ça fait (\d+) jours que tu n'as pas relancé (.+)\.$/, (m, n, g) => `It's been ${n} days since you last played ${g}.`],
+    [/^Tu as joué (\d+) jours d'affilée, bravo !$/, (m, n) => `You've played ${n} days in a row, well done!`],
+    [/^Tu as (\d+) pièces : va voir les nouveaux objets !$/, (m, n) => `You have ${n} coins: go check out the new items!`],
+    [/^Et si on relançait (.+) \?$/, (m, g) => `How about playing ${g} again?`],
+    [/^Il te manque (\d+) pièces pour « (.+) »\.$/, (m, n, x) => `You need ${n} more coins for "${x}".`],
+    [/^Acheté : (.+)$/, (m, x) => `Bought: ${x}`],
+    [/^Verrouillé : (.+) pour le débloquer\.$/, (m, x) => `Locked: ${x === '50 jeux' ? '50 games' : x === '100 h de jeu' ? '100 h of play time' : x === '10 h de jeu' ? '10 h of play time' : x === "7 jours d'affilée" ? '7 days in a row' : x} to unlock it.`],
+    [/^🔒 (.+)$/, (m, x) => `🔒 ${x === '50 jeux' ? '50 games' : x === '100 h de jeu' ? '100 h' : x === '10 h de jeu' ? '10 h' : x === "7 jours d'affilée" ? '7 days' : x}`],
+    [/^Niv\. (\d+)$/, (m, n) => `Lv. ${n}`],
+    [/^Niveau (\d+)$/, (m, n) => `Level ${n}`],
+    [/^(\d+) pièces$/, (m, n) => `${n} coins`],
     [/^Arcade · (.+) · (.+) % CPU$/, (m, a, b) => `Arcade · ${a} · ${b} % CPU`],
     [/^Jeux introuvables \((\d+)\)$/, (m, n) => `Missing games (${n})`],
     [/^Doublons \((\d+)\)$/, (m, n) => `Duplicates (${n})`],

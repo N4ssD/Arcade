@@ -45,6 +45,7 @@ Add your games from anywhere (Steam, Epic, GOG, plain `.exe` files, shortcuts), 
 - Starts with Windows, can stay in the **notification area**
 
 **Look and feel**
+- A customizable **pixel avatar** with a level, coins and unlockable outfits, who comments on your games (can be turned off)
 - **English and French** (Settings > Appearance)
 - Dark, light or automatic theme, custom accent color and logo color
 - Auto-hiding menu, expanded or collapsed on demand (click the logo to cycle between *auto*, *always open* and *always closed*)
