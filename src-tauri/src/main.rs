@@ -981,6 +981,9 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             sync_categories(db);
             let games: Vec<Value> = db.games.iter().map(|g| public_game(dir, g)).collect();
             let mut st = db.settings.clone();
+            #[cfg(windows)]
+            st.insert("startWithWindows".into(), json!(inst::startup_enabled()));
+            #[cfg(not(windows))]
             st.insert("startWithWindows".into(), json!(false));
             Ok(json!({
                 "version": VERSION,
@@ -1154,6 +1157,10 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             Ok(json!({ "ok": true }))
         }
         "settings" => {
+            #[cfg(windows)]
+            if let Some(on) = body.get("startWithWindows").and_then(|x| x.as_bool()) {
+                inst::set_startup(on);
+            }
             if let Some(o) = body.as_object() {
                 for (k, v) in o {
                     apply_setting(&mut db.settings, k, v);
@@ -1586,6 +1593,34 @@ mod inst {
         Ok(())
     }
 
+    fn startup_lnk() -> PathBuf {
+        let base = std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_default();
+        base.join(r"Microsoft\Windows\Start Menu\Programs\Startup\Arcade.lnk")
+    }
+
+    pub fn startup_enabled() -> bool {
+        startup_lnk().exists()
+    }
+
+    // Démarrage avec Windows : raccourci dans le dossier « Démarrage », lancé en arrière-plan
+    pub fn set_startup(on: bool) {
+        let lnk = startup_lnk();
+        if on {
+            if let Ok(exe) = std::env::current_exe() {
+                let dir = exe.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+                ps(&format!(
+                    "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('{}');$s.TargetPath='{}';$s.Arguments='--background';$s.WorkingDirectory='{}';$s.IconLocation='{},0';$s.Save();",
+                    q(&lnk.to_string_lossy()),
+                    q(&exe.to_string_lossy()),
+                    q(&dir),
+                    q(&exe.to_string_lossy())
+                ));
+            }
+        } else {
+            let _ = fs::remove_file(&lnk);
+        }
+    }
+
     pub fn launch_installed() {
         if let Some(d) = installed_dir() {
             let exe = d.join("Arcade.exe");
@@ -1614,6 +1649,7 @@ mod inst {
         );
         kill_others(&dir.join("Arcade.exe"));
         remove_shortcuts();
+        let _ = fs::remove_file(startup_lnk());
         let _ = Command::new("reg").args(["delete", REG, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
         if wipe {
             let _ = fs::remove_dir_all(appdata_dir());
@@ -1932,6 +1968,58 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
     }
 }
 
+// ---------- zone de notification ----------
+
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+fn sync_tray(app: &tauri::AppHandle, enabled: bool) {
+    use tauri::menu::{Menu, MenuItem};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+    if !enabled {
+        let _ = app.remove_tray_by_id("arcade");
+        return;
+    }
+    if app.tray_by_id("arcade").is_some() {
+        return;
+    }
+    let open = MenuItem::with_id(app, "open", "Ouvrir Arcade", true, None::<&str>);
+    let quit = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>);
+    let menu = match (open, quit) {
+        (Ok(o), Ok(q)) => Menu::with_items(app, &[&o, &q]),
+        _ => return,
+    };
+    let menu = match menu {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    let mut b = TrayIconBuilder::with_id("arcade").tooltip("Arcade").menu(&menu).show_menu_on_left_click(false);
+    if let Some(icon) = app.default_window_icon() {
+        b = b.icon(icon.clone());
+    }
+    let _ = b
+        .on_menu_event(|app, ev| match ev.id().as_ref() {
+            "open" => show_main(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, ev| {
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = ev {
+                show_main(tray.app_handle());
+            }
+        })
+        .build(app);
+}
+
+fn tray_mode(app: &tauri::AppHandle) -> bool {
+    app.state::<App>().db.lock().map(|d| d.settings.get("trayMode").and_then(|x| x.as_bool()).unwrap_or(false)).unwrap_or(false)
+}
+
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
     if name == "fetchCover" {
@@ -1972,7 +2060,11 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
         }
     }
     if name == "add" {
-        spawn_icon_jobs(app);
+        spawn_icon_jobs(app.clone());
+    }
+    if name == "settings" && body.get("trayMode").is_some() {
+        let on = tray_mode(&app);
+        sync_tray(&app, on);
     }
     res
 }
@@ -1991,6 +2083,7 @@ fn main() {
     let dir = data_dir();
     let _ = fs::create_dir_all(&dir);
     let db = load(&dir);
+    let db_tray = db.settings.get("trayMode").and_then(|x| x.as_bool()).unwrap_or(false);
     {
         let d = dir.clone();
         std::panic::set_hook(Box::new(move |info| log(&d, &format!("ERREUR (panic) : {}", info))));
@@ -1998,11 +2091,23 @@ fn main() {
     if !installer {
         log(&dir, &format!("Démarrage d'Arcade {} ({} jeux)", VERSION, db.games.len()));
     }
-    tauri::Builder::default()
+    let background = std::env::args().any(|a| a == "--background");
+    let start_hidden = background && !installer && db_tray;
+    let builder = tauri::Builder::default();
+    // une seule fenêtre Arcade à la fois (pas pour l'installeur)
+    let builder = if installer { builder } else { builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app))) };
+    builder
         .manage(App { db: Mutex::new(db), dir, running: Mutex::new(Default::default()) })
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
+            }
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                if tray_mode(app) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
             if let tauri::WindowEvent::DragDrop(d) = event {
                 let app = window.app_handle();
@@ -2058,7 +2163,9 @@ fn main() {
                     .inner_size(1280.0, 820.0)
                     .min_inner_size(900.0, 600.0)
                     .center()
+                    .visible(!start_hidden)
                     .build()?;
+                sync_tray(app.handle(), db_tray);
             }
             Ok(())
         })

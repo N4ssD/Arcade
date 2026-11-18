@@ -1,12 +1,14 @@
 # Historique des versions
 
 ## 2.0.0 — Arcade devient une vraie application
-- Réécriture en Rust (Tauri) : un seul `Arcade.exe`, sans Edge ni PowerShell.
-- Installeur intégré avec choix du dossier ; les données sont rangées dans le sous-dossier `data`.
-- Choix de la langue : français ou anglais (Paramètres > Apparence).
-- Menu automatique (réduit, déployé au survol), glisser-déposer de raccourcis et de `.exe`.
-- Temps de jeu en direct, rappel de pause, import Steam / Epic / GOG, et Arcade se réduit quand un jeu se lance (réglable).
-- Pas encore porté : démarrage avec Windows et zone de notification (l'ancienne version reste dans la branche `powershell-1.19`).
+- Réécrit en Rust (Tauri) : Arcade a sa propre fenêtre, sans Edge ni serveur PowerShell.
+- `ArcadeSetup.exe` : choix du dossier d'installation ; les données sont rangées dans le sous-dossier `data`.
+- Menu automatique : réduit au repos, il pousse le contenu vers la droite au survol (réglable).
+- Glisser-déposer de raccourcis (`.lnk`, `.url`) et de `.exe`.
+- Temps de jeu en direct, rappel de pause, import Steam / Epic / GOG.
+- Arcade se réduit quand un jeu se lance (réglable).
+- Démarrage avec Windows et zone de notification.
+- Choix de la langue : français ou anglais.
 
 ## 1.19.0 — Succès Arcade
 - Bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d'affilée, favoris, jeux terminés…).

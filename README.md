@@ -7,18 +7,15 @@ Un lanceur de jeux moderne pour Windows, en français : ta bibliothèque, tes st
 
 - Bibliothèque avec pochettes HD automatiques (Steam), icônes des jeux, catégories, favoris, recherche et tri
 - Ajout par **glisser-déposer** (raccourcis `.lnk` / `.url`, `.exe`), par sélecteur de fichier ou par scan d'un dossier
-- Import automatique des jeux **Steam, Epic et GOG**, **temps de jeu en direct**, rappel de pause, Arcade se réduit quand tu lances un jeu
+- Import automatique des jeux **Steam, Epic et GOG**, **temps de jeu en direct**, rappel de pause, démarrage avec Windows et zone de notification, Arcade se réduit quand tu lances un jeu
 - Rangée **Reprendre**, bouton **Surprends-moi**, zoom précis des cases
 - **Français et English** au choix (Paramètres > Apparence)
-- **Menu automatique** : il se réduit tout seul et se déploie au survol
+- **Menu automatique** : il se réduit tout seul et pousse le contenu au survol
 - **18 succès** à débloquer, historique des **nouveautés** par version
 - Thèmes, couleur d'accent et logo personnalisables ; réglages **Performance** pour couper animations et effets
 - Installeur intégré (choix du dossier, raccourcis, mise à jour, désinstallation) et bouton « Tout réinitialiser »
 - Tes données restent sur ton PC, dans le sous-dossier `data` du dossier d'installation (aucun compte, aucun envoi, à part le nom d'un jeu pour chercher sa pochette)
 
-### Pas encore porté depuis l'ancienne version
-
-Démarrage avec Windows et mode zone de notification.
 L'ancienne version complète (PowerShell) reste disponible dans la branche [`powershell-1.19`](../../tree/powershell-1.19).
 
 ## Télécharger

@@ -877,3 +877,9 @@ body.automenu.menu-open .cats { overflow-x: visible; }
 
 /* Fenêtre réduite ou cachée : on fige toutes les animations */
 body.idle *, body.idle *::before, body.idle *::after { animation-play-state: paused !important; }
+
+/* Menu automatique : en s'ouvrant il pousse le contenu vers la droite (animation fluide, sans recalcul de la mise en page) */
+body.automenu .main { transition: transform var(--dur) var(--ease); will-change: transform; }
+body.automenu.menu-open .main { transform: translateX(calc(var(--side-w) - var(--side-w-min))); }
+body.automenu.menu-open .sidebar { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { body.automenu .main { transition: none; } }
