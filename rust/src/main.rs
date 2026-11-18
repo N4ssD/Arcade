@@ -833,6 +833,295 @@ fn walk_dir(dir: &Path, depth: u32, root: &Path, out: &mut Vec<(String, String)>
     }
 }
 
+// ---------- installation / désinstallation (Windows) ----------
+
+#[cfg(windows)]
+mod inst {
+    use super::*;
+    use std::process::Command;
+
+    const REG: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Arcade";
+
+    fn ps(script: &str) -> String {
+        use base64::Engine;
+        let utf16: Vec<u8> = script.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        let enc = base64::engine::general_purpose::STANDARD.encode(utf16);
+        let root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+        let exe = format!(r"{}\System32\WindowsPowerShell\v1.0\powershell.exe", root);
+        Command::new(exe)
+            .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", &enc])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_default()
+    }
+
+    fn q(s: &str) -> String {
+        s.replace('\'', "''")
+    }
+
+    pub fn reg_read(name: &str) -> String {
+        let out = Command::new("reg").args(["query", REG, "/v", name]).creation_flags(CREATE_NO_WINDOW).output();
+        let text = match out {
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).to_string(),
+            _ => return String::new(),
+        };
+        for line in text.lines() {
+            if line.trim_start().starts_with(name) {
+                if let Some(p) = line.find("REG_SZ") {
+                    return line[p + 6..].trim().to_string();
+                }
+            }
+        }
+        String::new()
+    }
+
+    fn reg_write(dir: &Path, exe: &Path) {
+        let set = |n: &str, t: &str, v: &str| {
+            let _ = Command::new("reg").args(["add", REG, "/v", n, "/t", t, "/d", v, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
+        };
+        set("DisplayName", "REG_SZ", "Arcade");
+        set("DisplayVersion", "REG_SZ", VERSION);
+        set("Publisher", "REG_SZ", "N4ssD");
+        set("InstallLocation", "REG_SZ", &dir.to_string_lossy());
+        set("DisplayIcon", "REG_SZ", &exe.to_string_lossy());
+        set("UninstallString", "REG_SZ", &format!("\"{}\" --uninstall", exe.to_string_lossy()));
+        set("NoModify", "REG_DWORD", "1");
+        set("NoRepair", "REG_DWORD", "1");
+    }
+
+    pub fn installed_dir() -> Option<PathBuf> {
+        let d = reg_read("InstallLocation");
+        if d.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(d))
+        }
+    }
+
+    pub fn needs_install() -> bool {
+        let args: Vec<String> = std::env::args().collect();
+        if args.iter().any(|a| a == "--portable") || std::env::var_os("ARCADE_PORTABLE").is_some() {
+            return false;
+        }
+        let me = match std::env::current_exe() {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
+        let my_dir = me.parent().map(|p| p.to_string_lossy().to_lowercase()).unwrap_or_default();
+        match installed_dir() {
+            Some(d) => {
+                let same = d.to_string_lossy().trim_end_matches('\\').to_lowercase() == my_dir.trim_end_matches('\\');
+                !(same && d.join("Arcade.exe").exists())
+            }
+            None => true,
+        }
+    }
+
+    pub fn default_dir() -> PathBuf {
+        if let Some(d) = installed_dir() {
+            return d;
+        }
+        let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
+        base.join("Programs").join("Arcade")
+    }
+
+    pub fn valid_dir(dir: &Path) -> Result<(), String> {
+        let s = dir.to_string_lossy().to_string();
+        if !dir.is_absolute() || s.len() < 6 {
+            return Err("Dossier d'installation invalide.".into());
+        }
+        if dir.parent().is_none() || dir.parent().map(|p| p.as_os_str().is_empty()).unwrap_or(true) {
+            return Err("Choisis un dossier, pas la racine d'un disque.".into());
+        }
+        if let Ok(sr) = std::env::var("SystemRoot") {
+            if s.to_lowercase().starts_with(&sr.to_lowercase()) {
+                return Err("Choisis un dossier en dehors de Windows.".into());
+            }
+        }
+        Ok(())
+    }
+
+    // Si le dossier choisi contient déjà autre chose, Arcade s'installe dans un sous-dossier « Arcade »
+    pub fn tidy_dir(p: &Path) -> PathBuf {
+        if p.join("Arcade.exe").exists() {
+            return p.to_path_buf();
+        }
+        if let Ok(mut rd) = fs::read_dir(p) {
+            if rd.next().is_some() {
+                return p.join("Arcade");
+            }
+        }
+        p.to_path_buf()
+    }
+
+    fn kill_others(exe: &Path) {
+        let me = std::process::id();
+        ps(&format!(
+            "Get-Process | Where-Object {{ $_.Path -ieq '{}' -and $_.Id -ne {} }} | Stop-Process -Force -ErrorAction SilentlyContinue",
+            q(&exe.to_string_lossy()),
+            me
+        ));
+    }
+
+    fn make_shortcuts(dir: &Path, desktop: bool, start: bool) {
+        let exe = dir.join("Arcade.exe");
+        let one = |folder: &str| {
+            format!(
+                "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('{}')+'\\Arcade.lnk');$s.TargetPath='{}';$s.WorkingDirectory='{}';$s.IconLocation='{},0';$s.Description='Arcade - lanceur de jeux';$s.Save();",
+                folder,
+                q(&exe.to_string_lossy()),
+                q(&dir.to_string_lossy()),
+                q(&exe.to_string_lossy())
+            )
+        };
+        let mut script = String::new();
+        if desktop {
+            script += &one("Desktop");
+        }
+        if start {
+            script += &one("Programs");
+        }
+        if !script.is_empty() {
+            ps(&script);
+        }
+    }
+
+    fn remove_shortcuts() {
+        ps("foreach($k in 'Desktop','Programs'){$p=[Environment]::GetFolderPath($k)+'\\Arcade.lnk';if(Test-Path -LiteralPath $p){Remove-Item -LiteralPath $p -Force}}");
+    }
+
+    pub fn install(dir: &Path, desktop: bool, start: bool) -> Result<(), String> {
+        valid_dir(dir)?;
+        let target = dir.join("Arcade.exe");
+        kill_others(&target);
+        fs::create_dir_all(dir).map_err(|e| format!("Impossible de créer le dossier : {}", e))?;
+        let me = std::env::current_exe().map_err(|e| e.to_string())?;
+        // le fichier cible peut mettre un instant à se libérer après l'arrêt d'Arcade
+        let mut last = String::new();
+        for _ in 0..10 {
+            match fs::copy(&me, &target) {
+                Ok(_) => {
+                    last.clear();
+                    break;
+                }
+                Err(e) => {
+                    last = e.to_string();
+                    std::thread::sleep(std::time::Duration::from_millis(400));
+                }
+            }
+        }
+        if !last.is_empty() {
+            return Err(format!("Copie de l'application impossible : {}", last));
+        }
+        make_shortcuts(dir, desktop, start);
+        reg_write(dir, &target);
+        Ok(())
+    }
+
+    pub fn launch_installed() {
+        if let Some(d) = installed_dir() {
+            let exe = d.join("Arcade.exe");
+            let _ = Command::new(&exe).current_dir(&d).spawn();
+        }
+    }
+
+    pub fn uninstall() {
+        use rfd::{MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
+        let dir = match installed_dir() {
+            Some(d) => d,
+            None => {
+                MessageDialog::new().set_title("Arcade").set_description("Arcade ne semble pas installé.").set_level(MessageLevel::Info).show();
+                return;
+            }
+        };
+        let yes = |t: &str, d: &str| {
+            MessageDialog::new().set_title(t).set_description(d).set_buttons(MessageButtons::YesNo).set_level(MessageLevel::Warning).show() == MessageDialogResult::Yes
+        };
+        if !yes("Désinstaller Arcade", "Désinstaller Arcade ?") {
+            return;
+        }
+        let wipe = yes(
+            "Désinstaller Arcade",
+            "Supprimer aussi ta bibliothèque (jeux, couvertures, réglages) ?\n\nChoisis « Non » pour la garder si tu réinstalles Arcade plus tard.",
+        );
+        kill_others(&dir.join("Arcade.exe"));
+        remove_shortcuts();
+        let _ = Command::new("reg").args(["delete", REG, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
+        if wipe {
+            let _ = fs::remove_dir_all(data_dir());
+        }
+        let _ = Command::new("cmd")
+            .raw_arg(format!("/c ping -n 4 127.0.0.1 >nul & rmdir /s /q \"{}\"", dir.to_string_lossy()))
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+        MessageDialog::new().set_title("Arcade").set_description("Arcade a été désinstallé.").set_level(MessageLevel::Info).show();
+    }
+}
+
+static CHOSEN: Mutex<String> = Mutex::new(String::new());
+
+#[tauri::command]
+async fn setup(name: String, body: Value, app: tauri::AppHandle) -> Result<Value, String> {
+    #[cfg(windows)]
+    {
+        match name.as_str() {
+            "info" => {
+                let old = inst::reg_read("DisplayVersion");
+                let installed = inst::installed_dir().is_some();
+                let dir = {
+                    let mut c = CHOSEN.lock().map_err(|_| "verrou".to_string())?;
+                    if c.is_empty() {
+                        *c = inst::default_dir().to_string_lossy().to_string();
+                    }
+                    c.clone()
+                };
+                Ok(json!({ "mode": if installed { "update" } else { "install" }, "version": VERSION, "dir": dir, "oldVersion": old }))
+            }
+            "browse" => {
+                let start = CHOSEN.lock().map(|c| c.clone()).unwrap_or_default();
+                let mut dlg = rfd::FileDialog::new().set_title("Choisis le dossier dans lequel installer Arcade");
+                if !start.is_empty() {
+                    dlg = dlg.set_directory(&start);
+                }
+                match dlg.pick_folder() {
+                    Some(p) => {
+                        let d = inst::tidy_dir(&p).to_string_lossy().to_string();
+                        if let Ok(mut c) = CHOSEN.lock() {
+                            *c = d.clone();
+                        }
+                        Ok(json!({ "dir": d }))
+                    }
+                    None => Ok(json!({ "dir": null })),
+                }
+            }
+            "install" => {
+                let dir = CHOSEN.lock().map(|c| c.clone()).unwrap_or_default();
+                let (desktop, start) = (gb(&body, "desktop"), gb(&body, "start"));
+                let r = inst::install(Path::new(&dir), desktop, start);
+                log(&data_dir(), &format!("Installation dans {} : {:?}", dir, r));
+                match r {
+                    Ok(()) => Ok(json!({ "ok": true })),
+                    Err(e) => Ok(json!({ "ok": false, "error": e })),
+                }
+            }
+            "finish" => {
+                if gb(&body, "launch") {
+                    inst::launch_installed();
+                }
+                app.exit(0);
+                Ok(json!({ "ok": true }))
+            }
+            _ => Ok(json!({ "ok": true })),
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (&name, &body, &app);
+        Err("L'installation n'est disponible que sous Windows.".into())
+    }
+}
+
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>) -> Result<Value, String> {
     if let Some(r) = dialog_call(&name, &body) {
@@ -851,6 +1140,16 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>) -> Result<
 }
 
 fn main() {
+    #[cfg(windows)]
+    if std::env::args().any(|a| a == "--uninstall") {
+        inst::uninstall();
+        return;
+    }
+    #[cfg(windows)]
+    let installer = inst::needs_install();
+    #[cfg(not(windows))]
+    let installer = false;
+
     let dir = data_dir();
     let _ = fs::create_dir_all(&dir);
     let db = load(&dir);
@@ -858,10 +1157,15 @@ fn main() {
         let d = dir.clone();
         std::panic::set_hook(Box::new(move |info| log(&d, &format!("ERREUR (panic) : {}", info))));
     }
-    log(&dir, &format!("Démarrage d'Arcade Rust {} ({} jeux)", VERSION, db.games.len()));
+    if !installer {
+        log(&dir, &format!("Démarrage d'Arcade {} ({} jeux)", VERSION, db.games.len()));
+    }
     tauri::Builder::default()
         .manage(App { db: Mutex::new(db), dir })
         .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
             if let tauri::WindowEvent::DragDrop(d) = event {
                 let app = window.app_handle();
                 match d {
@@ -889,7 +1193,25 @@ fn main() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![api])
+        .invoke_handler(tauri::generate_handler![api, setup])
+        .setup(move |app| {
+            if installer {
+                tauri::WebviewWindowBuilder::new(app, "setup", tauri::WebviewUrl::App("setup.html".into()))
+                    .title("Installation d'Arcade")
+                    .inner_size(720.0, 720.0)
+                    .resizable(false)
+                    .center()
+                    .build()?;
+            } else {
+                tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+                    .title("Arcade")
+                    .inner_size(1280.0, 820.0)
+                    .min_inner_size(900.0, 600.0)
+                    .center()
+                    .build()?;
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
             log(&data_dir(), &format!("ERREUR au lancement : {}", e));
