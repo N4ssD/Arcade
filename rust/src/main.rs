@@ -3,6 +3,8 @@
 
 use serde_json::{json, Map, Value};
 use std::fs;
+use std::io::Read;
+use std::sync::atomic::AtomicBool;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
@@ -40,6 +42,7 @@ fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
+static CHANGED: AtomicBool = AtomicBool::new(false);
 static COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn new_id() -> String {
@@ -341,12 +344,21 @@ fn sync_categories(db: &mut Db) {
     }
 }
 
-fn public_game(g: &Obj) -> Value {
+fn public_game(dir: &Path, g: &Obj) -> Value {
     let mut o = g.clone();
     let target = g.get("target").and_then(|x| x.as_str()).unwrap_or("");
     let exists = if is_uri(target) { true } else { Path::new(target).exists() };
-    o.insert("iconUrl".into(), Value::Null);
-    o.insert("coverUrl".into(), Value::Null);
+    let media = |field: &str, sub: &str, kind: &str| -> Value {
+        let p = g.get(field).and_then(|x| x.as_str()).unwrap_or("");
+        let f = file_name_of(p);
+        if !f.is_empty() && dir.join(sub).join(&f).is_file() {
+            json!(format!("{}/{}/{}", ARC_BASE, kind, url_enc(&f)))
+        } else {
+            Value::Null
+        }
+    };
+    o.insert("iconUrl".into(), media("icon", "icons", "icon"));
+    o.insert("coverUrl".into(), media("cover", "covers", "cover"));
     o.insert("exists".into(), json!(exists));
     Value::Object(o)
 }
@@ -421,13 +433,276 @@ fn find_game(db: &Db, id: &str) -> Option<usize> {
     db.games.iter().position(|g| g.get("id").and_then(|x| x.as_str()) == Some(id))
 }
 
+
+// ---------- couvertures et icônes ----------
+
+#[cfg(windows)]
+const ARC_BASE: &str = "http://arcade.localhost";
+#[cfg(not(windows))]
+const ARC_BASE: &str = "arcade://localhost";
+
+fn url_enc(s: &str) -> String {
+    let mut o = String::new();
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || b == b'.' || b == b'-' || b == b'_' {
+            o.push(b as char);
+        } else {
+            o.push_str(&format!("%{:02X}", b));
+        }
+    }
+    o
+}
+
+fn url_dec(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out: Vec<u8> = vec![];
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            if let Some(h) = b.get(i + 1..i + 3).and_then(|x| std::str::from_utf8(x).ok()) {
+                if let Ok(v) = u8::from_str_radix(h, 16) {
+                    out.push(v);
+                    i += 3;
+                    continue;
+                }
+            }
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
+fn file_name_of(p: &str) -> String {
+    p.rsplit(|c| c == '\\' || c == '/').next().unwrap_or("").to_string()
+}
+
+fn remove_media(dir: &Path, sub: &str, p: &str) {
+    if p.is_empty() {
+        return;
+    }
+    let f = file_name_of(p);
+    if f.is_empty() || f.contains("..") {
+        return;
+    }
+    let _ = fs::remove_file(dir.join(sub).join(f));
+}
+
+fn import_cover(dir: &Path, src: &str) -> Option<String> {
+    let sp = Path::new(src);
+    if src.is_empty() || !sp.is_file() {
+        return None;
+    }
+    let ext = sp.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_else(|| "png".into());
+    let cdir = dir.join("covers");
+    let _ = fs::create_dir_all(&cdir);
+    let dest = cdir.join(format!("{}.{}", new_id(), ext));
+    fs::copy(sp, &dest).ok()?;
+    Some(dest.to_string_lossy().to_string())
+}
+
+fn get_norm(s: &str) -> String {
+    let t: String = s.to_lowercase().chars().filter(|c| !matches!(c, '\u{2122}' | '\u{ae}' | '\u{a9}')).collect();
+    let t: String = t.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { ' ' }).collect();
+    t.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn name_match(a: &str, b: &str) -> bool {
+    let (x, y) = (get_norm(a), get_norm(b));
+    if x.is_empty() || y.is_empty() {
+        return false;
+    }
+    if x == y {
+        return true;
+    }
+    let tx: Vec<&str> = x.split(' ').collect();
+    let ty: Vec<&str> = y.split(' ').collect();
+    let common = tx.iter().filter(|t| ty.contains(t)).count();
+    (common as f64 / tx.len().max(ty.len()) as f64) >= 0.66
+}
+
+fn http_get(url: &str, secs: u64) -> Result<Vec<u8>, String> {
+    let r = ureq::get(url).timeout(std::time::Duration::from_secs(secs)).call().map_err(|e| e.to_string())?;
+    let mut buf = Vec::new();
+    r.into_reader().take(8_000_000).read_to_end(&mut buf).map_err(|e| e.to_string())?;
+    Ok(buf)
+}
+
+fn find_steam_appid(name: &str) -> Result<u64, String> {
+    let url = format!("https://store.steampowered.com/api/storesearch/?term={}&l=english&cc=us", url_enc(name));
+    let body = http_get(&url, 10)?;
+    let v: Value = serde_json::from_slice(&body).map_err(|e| e.to_string())?;
+    let items = v.get("items").and_then(|x| x.as_array()).cloned().unwrap_or_default();
+    for i in &items {
+        if get_norm(&gs(i, "name")) == get_norm(name) {
+            return Ok(gn(i, "id") as u64);
+        }
+    }
+    for i in &items {
+        if name_match(&gs(i, "name"), name) {
+            return Ok(gn(i, "id") as u64);
+        }
+    }
+    Ok(0)
+}
+
+fn steam_appid_of(uri: &str) -> u64 {
+    let l = uri.to_lowercase();
+    for pre in ["steam://rungameid/", "steam://run/"] {
+        if let Some(rest) = l.strip_prefix(pre) {
+            let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if let Ok(n) = digits.parse::<u64>() {
+                return n;
+            }
+        }
+    }
+    0
+}
+
+// Ok(None) = pas de couverture trouvée ; Err = pas de connexion
+fn find_cover(name: &str, target: &str, query: &str, cdir: &Path) -> Result<Option<String>, String> {
+    let mut tgt = target.to_string();
+    if tgt.to_lowercase().ends_with(".url") && Path::new(&tgt).is_file() {
+        if let Some(u) = url_file_target(Path::new(&tgt)) {
+            tgt = u;
+        }
+    }
+    let mut appid = if is_uri(&tgt) { steam_appid_of(&tgt) } else { 0 };
+    if appid == 0 {
+        let base = if query.is_empty() { name } else { query };
+        let drop = ["launcher", "win64", "win32", "x64", "x86", "shipping", "client"];
+        let clean: Vec<&str> = base.split_whitespace().filter(|w| !drop.contains(&w.to_lowercase().as_str())).collect();
+        let clean = clean.join(" ");
+        if clean.is_empty() {
+            return Ok(None);
+        }
+        appid = find_steam_appid(&clean)?;
+    }
+    if appid == 0 {
+        return Ok(None);
+    }
+    let bases = [
+        "https://cdn.cloudflare.steamstatic.com/steam/apps",
+        "https://cdn.akamai.steamstatic.com/steam/apps",
+        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps",
+    ];
+    for f in ["library_600x900_2x.jpg", "library_600x900.jpg"] {
+        for b in bases {
+            if let Ok(bytes) = http_get(&format!("{}/{}/{}", b, appid, f), 15) {
+                if bytes.len() > 8000 && bytes[0] == 0xFF && bytes[1] == 0xD8 {
+                    let _ = fs::create_dir_all(cdir);
+                    let dest = cdir.join(format!("{}.jpg", new_id()));
+                    if fs::write(&dest, &bytes).is_ok() {
+                        return Ok(Some(dest.to_string_lossy().to_string()));
+                    }
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
+#[cfg(windows)]
+fn extract_icon(dir: &Path, target: &str) -> Option<String> {
+    if is_uri(target) || !Path::new(target).is_file() {
+        return None;
+    }
+    let idir = dir.join("icons");
+    let _ = fs::create_dir_all(&idir);
+    let script = dir.join("icon.ps1");
+    fs::write(&script, include_str!("icon.ps1")).ok()?;
+    let root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+    let ps = format!(r"{}\System32\WindowsPowerShell\v1.0\powershell.exe", root);
+    let out = std::process::Command::new(ps)
+        .args(["-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(&script)
+        .args(["-Target", target, "-IconsDir"])
+        .arg(&idir)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
+    let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if name.is_empty() || !idir.join(&name).is_file() {
+        return None;
+    }
+    Some(idir.join(name).to_string_lossy().to_string())
+}
+
+#[cfg(not(windows))]
+fn extract_icon(_dir: &Path, _target: &str) -> Option<String> {
+    None
+}
+
+// Extrait en arrière-plan les icônes des jeux qui n'en ont pas encore
+fn spawn_icon_jobs(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let st = app.state::<App>();
+        let todo: Vec<(String, String)> = match st.db.lock() {
+            Ok(db) => db
+                .games
+                .iter()
+                .filter(|g| g.get("icon").map(|x| x.is_null()).unwrap_or(true) && !g.get("iconTried").and_then(|x| x.as_bool()).unwrap_or(false))
+                .map(|g| (gs(&Value::Object(g.clone()), "id"), gs(&Value::Object(g.clone()), "target")))
+                .collect(),
+            Err(_) => return,
+        };
+        for (id, target) in todo {
+            let ico = extract_icon(&st.dir, &target);
+            if let Ok(mut db) = st.db.lock() {
+                if let Some(i) = find_game(&db, &id) {
+                    db.games[i].insert("iconTried".into(), json!(true));
+                    if let Some(p) = ico {
+                        db.games[i].insert("icon".into(), json!(p));
+                    }
+                    save(&st.dir, &db);
+                    CHANGED.store(true, Ordering::Relaxed);
+                }
+            }
+        }
+    });
+}
+
+fn media_response(dir: &Path, path: &str) -> tauri::http::Response<Vec<u8>> {
+    let p = path.trim_start_matches('/');
+    let (kind, name) = p.split_once('/').unwrap_or(("", ""));
+    let name = url_dec(name);
+    let sub = match kind {
+        "cover" => "covers",
+        "icon" => "icons",
+        _ => "",
+    };
+    let bad = sub.is_empty() || name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..");
+    let data = if bad { None } else { fs::read(dir.join(sub).join(&name)).ok() };
+    match data {
+        Some(bytes) => {
+            let ext = name.rsplit('.').next().unwrap_or("").to_lowercase();
+            let mime = match ext.as_str() {
+                "png" => "image/png",
+                "jpg" | "jpeg" => "image/jpeg",
+                "webp" => "image/webp",
+                "gif" => "image/gif",
+                "bmp" => "image/bmp",
+                _ => "application/octet-stream",
+            };
+            tauri::http::Response::builder()
+                .header("Content-Type", mime)
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Cache-Control", "max-age=86400")
+                .body(bytes)
+                .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
+        }
+        None => tauri::http::Response::builder().status(404).body(Vec::new()).unwrap_or_else(|_| tauri::http::Response::new(Vec::new())),
+    }
+}
+
+
 fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, String> {
     match name {
-        "ping" => Ok(json!({ "ok": true, "changed": false, "notices": [] })),
+        "ping" => Ok(json!({ "ok": true, "changed": CHANGED.swap(false, Ordering::Relaxed), "notices": [] })),
         "bye" => Ok(json!({ "ok": true })),
         "library" => {
             sync_categories(db);
-            let games: Vec<Value> = db.games.iter().map(public_game).collect();
+            let games: Vec<Value> = db.games.iter().map(|g| public_game(dir, g)).collect();
             let mut st = db.settings.clone();
             st.insert("startWithWindows".into(), json!(false));
             Ok(json!({
@@ -460,8 +735,9 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
                     g.insert("target".into(), json!(t));
                     g.insert("args".into(), json!(""));
                     g.insert("category".into(), json!(limit(gs(it, "category").trim(), 30)));
-                    g.insert("cover".into(), Value::Null);
-                    g.insert("coverTried".into(), json!(false));
+                    let cv = import_cover(dir, &gs(it, "cover"));
+                    g.insert("coverTried".into(), json!(cv.is_some()));
+                    g.insert("cover".into(), match cv { Some(p) => json!(p), None => Value::Null });
                     g.insert("icon".into(), Value::Null);
                     g.insert("iconTried".into(), json!(false));
                     g.insert("favorite".into(), json!(false));
@@ -503,6 +779,23 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
                     g.insert(k.into(), json!(gb(&p, k)));
                 }
             }
+            if let Some(cv) = p.get("cover") {
+                let old = g.get("cover").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                match cv {
+                    Value::Null => {
+                        remove_media(dir, "covers", &old);
+                        g.insert("cover".into(), Value::Null);
+                    }
+                    Value::String(s) if !s.is_empty() => {
+                        if let Some(np) = import_cover(dir, s) {
+                            remove_media(dir, "covers", &old);
+                            g.insert("cover".into(), json!(np));
+                            g.insert("coverTried".into(), json!(true));
+                        }
+                    }
+                    _ => {}
+                }
+            }
             if p.get("target").is_some() && !gs(&p, "target").trim().is_empty() {
                 let t = gs(&p, "target").trim().to_string();
                 if !is_uri(&t) || allowed_scheme(&t) {
@@ -516,7 +809,9 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             let id = gs(body, "id");
             match find_game(db, &id) {
                 Some(i) => {
-                    db.games.remove(i);
+                    let old = db.games.remove(i);
+                    remove_media(dir, "covers", old.get("cover").and_then(|x| x.as_str()).unwrap_or(""));
+                    remove_media(dir, "icons", old.get("icon").and_then(|x| x.as_str()).unwrap_or(""));
                     save(dir, db);
                     Ok(json!({ "ok": true }))
                 }
@@ -630,8 +925,6 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             Ok(json!({ "ok": true, "settings": db.settings }))
         }
         // Couvertures et icônes : pas encore portées, on répond sans erreur pour ne pas déranger
-        "fetchCover" => Ok(json!({ "ok": true, "found": false, "skipped": true })),
-        "refreshIcon" => Ok(json!({ "ok": true, "found": false })),
         // Fonctions pas encore portées dans la version Rust
         "detectLaunchers" | "addDropped" => {
             Err("Pas encore disponible dans la version Rust (en cours de portage).".into())
@@ -1122,8 +1415,80 @@ async fn setup(name: String, body: Value, app: tauri::AppHandle) -> Result<Value
     }
 }
 
+async fn fetch_cover_cmd(state: &tauri::State<'_, App>, body: &Value) -> Result<Value, String> {
+    let id = gs(body, "id");
+    let force = gb(body, "force");
+    let query = gs(body, "query");
+    let (name, target) = {
+        let db = state.db.lock().map_err(|_| "verrou".to_string())?;
+        let i = match find_game(&db, &id) {
+            Some(i) => i,
+            None => return Ok(json!({ "ok": false })),
+        };
+        let g = Value::Object(db.games[i].clone());
+        if !force {
+            let auto = db.settings.get("autoCovers").and_then(|x| x.as_bool()).unwrap_or(true);
+            if !auto || !g.get("cover").map(|c| c.is_null()).unwrap_or(true) || gb(&g, "coverTried") {
+                return Ok(json!({ "ok": true, "found": false, "skipped": true }));
+            }
+        }
+        (gs(&g, "name"), gs(&g, "target"))
+    };
+    let cdir = state.dir.join("covers");
+    let res = tauri::async_runtime::spawn_blocking(move || find_cover(&name, &target, &query, &cdir)).await.map_err(|e| e.to_string())?;
+    match res {
+        Err(e) => {
+            log(&state.dir, &format!("Recherche de couverture impossible : {}", e));
+            Ok(json!({ "ok": false, "offline": true }))
+        }
+        Ok(file) => {
+            let mut db = state.db.lock().map_err(|_| "verrou".to_string())?;
+            if let Some(i) = find_game(&db, &id) {
+                db.games[i].insert("coverTried".into(), json!(true));
+                if let Some(f) = &file {
+                    let old = db.games[i].get("cover").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                    remove_media(&state.dir, "covers", &old);
+                    db.games[i].insert("cover".into(), json!(f));
+                }
+                save(&state.dir, &db);
+            }
+            Ok(json!({ "ok": true, "found": file.is_some() }))
+        }
+    }
+}
+
+async fn refresh_icon_cmd(state: &tauri::State<'_, App>, body: &Value) -> Result<Value, String> {
+    let id = gs(body, "id");
+    let target = {
+        let db = state.db.lock().map_err(|_| "verrou".to_string())?;
+        match find_game(&db, &id) {
+            Some(i) => gs(&Value::Object(db.games[i].clone()), "target"),
+            None => return Ok(json!({ "ok": false })),
+        }
+    };
+    let dir = state.dir.clone();
+    let ico = tauri::async_runtime::spawn_blocking(move || extract_icon(&dir, &target)).await.map_err(|e| e.to_string())?;
+    let mut db = state.db.lock().map_err(|_| "verrou".to_string())?;
+    if let Some(i) = find_game(&db, &id) {
+        db.games[i].insert("iconTried".into(), json!(true));
+        if let Some(p) = &ico {
+            let old = db.games[i].get("icon").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            remove_media(&state.dir, "icons", &old);
+            db.games[i].insert("icon".into(), json!(p));
+        }
+        save(&state.dir, &db);
+    }
+    Ok(json!({ "ok": true, "found": ico.is_some() }))
+}
+
 #[tauri::command]
-async fn api(name: String, body: Value, state: tauri::State<'_, App>) -> Result<Value, String> {
+async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
+    if name == "fetchCover" {
+        return fetch_cover_cmd(&state, &body).await;
+    }
+    if name == "refreshIcon" {
+        return refresh_icon_cmd(&state, &body).await;
+    }
     if let Some(r) = dialog_call(&name, &body) {
         // pour le scan, on retire les jeux déjà présents
         if name == "scan" {
@@ -1136,7 +1501,12 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>) -> Result<
         return r;
     }
     let mut db = state.db.lock().map_err(|_| "Verrou de la bibliothèque indisponible.".to_string())?;
-    handle(&state.dir, &mut db, &name, &body)
+    let res = handle(&state.dir, &mut db, &name, &body);
+    drop(db);
+    if name == "add" {
+        spawn_icon_jobs(app);
+    }
+    res
 }
 
 fn main() {
@@ -1187,11 +1557,18 @@ fn main() {
                         if let Some((added, skipped)) = res {
                             log(&st.dir, &format!("Dépôt : {} ajouté(s), {} ignoré(s)", added, skipped));
                             let _ = app.emit("arcade-dropped", json!({ "added": added, "skipped": skipped }));
+                            if added > 0 {
+                                spawn_icon_jobs(app.clone());
+                            }
                         }
                     }
                     _ => {}
                 }
             }
+        })
+        .register_uri_scheme_protocol("arcade", |ctx, req| {
+            let st = ctx.app_handle().state::<App>();
+            media_response(&st.dir, req.uri().path())
         })
         .invoke_handler(tauri::generate_handler![api, setup])
         .setup(move |app| {
@@ -1203,6 +1580,7 @@ fn main() {
                     .center()
                     .build()?;
             } else {
+                spawn_icon_jobs(app.handle().clone());
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
                     .title("Arcade")
                     .inner_size(1280.0, 820.0)
