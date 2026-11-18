@@ -138,10 +138,43 @@ fn opt_str(v: &Value, k: &str) -> Value {
     }
 }
 
-fn data_dir() -> PathBuf {
+fn appdata_dir() -> PathBuf {
     match std::env::var_os("APPDATA") {
         Some(a) => PathBuf::from(a).join("Arcade"),
         None => PathBuf::from("Arcade-data"),
+    }
+}
+
+// Installé : les données sont dans le dossier d'installation (sous-dossier « data »), bien visibles.
+// Sinon (mode portable, ancienne version) : %APPDATA%\Arcade.
+fn data_dir() -> PathBuf {
+    use std::sync::OnceLock;
+    static D: OnceLock<PathBuf> = OnceLock::new();
+    D.get_or_init(|| {
+        #[cfg(windows)]
+        {
+            if inst::running_installed() {
+                if let Some(p) = std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.to_path_buf())) {
+                    return p.join("data");
+                }
+            }
+        }
+        appdata_dir()
+    })
+    .clone()
+}
+
+fn copy_dir(src: &Path, dst: &Path) {
+    let _ = fs::create_dir_all(dst);
+    if let Ok(rd) = fs::read_dir(src) {
+        for e in rd.flatten() {
+            let (s, d) = (e.path(), dst.join(e.file_name()));
+            if s.is_dir() {
+                copy_dir(&s, &d);
+            } else if !d.exists() {
+                let _ = fs::copy(&s, &d);
+            }
+        }
     }
 }
 
@@ -1231,6 +1264,18 @@ mod inst {
         }
     }
 
+    pub fn running_installed() -> bool {
+        let me = match std::env::current_exe() {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
+        let my_dir = me.parent().map(|p| p.to_string_lossy().to_lowercase()).unwrap_or_default();
+        match installed_dir() {
+            Some(d) => d.to_string_lossy().trim_end_matches('\\').to_lowercase() == my_dir.trim_end_matches('\\') && d.join("Arcade.exe").exists(),
+            None => false,
+        }
+    }
+
     pub fn needs_install() -> bool {
         let args: Vec<String> = std::env::args().collect();
         if args.iter().any(|a| a == "--portable") || std::env::var_os("ARCADE_PORTABLE").is_some() {
@@ -1346,6 +1391,23 @@ mod inst {
         if !last.is_empty() {
             return Err(format!("Copie de l'application impossible : {}", last));
         }
+        // données : reprises de l'ancien dossier d'installation, sinon de l'ancienne version (%APPDATA%)
+        let ndata = dir.join("data");
+        if !ndata.join("library.json").exists() {
+            match installed_dir() {
+                Some(old) if old.join("data").join("library.json").exists() && old != dir => copy_dir(&old.join("data"), &ndata),
+                _ => {
+                    if appdata_dir().join("library.json").exists() {
+                        copy_dir(&appdata_dir(), &ndata);
+                    }
+                }
+            }
+        }
+        let _ = fs::create_dir_all(&ndata);
+        let _ = fs::write(
+            dir.join("LISEZMOI.txt"),
+            "Arcade - dossier d'installation\r\n\r\nArcade.exe : l'application\r\ndata\\library.json : ta bibliotheque et tes reglages\r\ndata\\covers : les pochettes\r\ndata\\icons : les icones\r\ndata\\arcade.log : le journal (utile en cas de probleme)\r\n",
+        );
         make_shortcuts(dir, desktop, start);
         reg_write(dir, &target);
         Ok(())
@@ -1381,7 +1443,10 @@ mod inst {
         remove_shortcuts();
         let _ = Command::new("reg").args(["delete", REG, "/f"]).creation_flags(CREATE_NO_WINDOW).output();
         if wipe {
-            let _ = fs::remove_dir_all(data_dir());
+            let _ = fs::remove_dir_all(appdata_dir());
+        } else {
+            // on garde la bibliothèque : elle sera reprise à la prochaine installation
+            copy_dir(&dir.join("data"), &appdata_dir());
         }
         let _ = Command::new("cmd")
             .raw_arg(format!("/c ping -n 4 127.0.0.1 >nul & rmdir /s /q \"{}\"", dir.to_string_lossy()))

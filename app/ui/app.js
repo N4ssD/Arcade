@@ -158,8 +158,13 @@
   }
 
   // ---------- Menu latéral réductible ----------
+  // Menu automatique : réduit quand la souris n'est pas dessus, déployé (par-dessus le contenu) dès qu'elle y passe
+  const autoMenu = () => { try { return localStorage.getItem('arcade.autoMenu') !== '0'; } catch { return true; } };
   function applySidebar() {
-    const c = !!state.settings.sidebarCollapsed;
+    const auto = autoMenu();
+    document.body.classList.toggle('automenu', auto);
+    if (!auto) document.body.classList.remove('menu-open');
+    const c = auto || !!state.settings.sidebarCollapsed;
     document.body.classList.toggle('collapsed', c);
     const label = c ? 'Agrandir le menu' : 'Réduire le menu (Ctrl+B)';
     $('#btn-collapse').title = label;
@@ -173,6 +178,7 @@
   // puis chaque élément glisse de son ancienne position vers la nouvelle (technique « FLIP »).
   // Résultat : aucune carte ne se redimensionne image par image, donc rien ne saute.
   function toggleSidebar() {
+    if (autoMenu()) return;
     const c = !state.settings.sidebarCollapsed;
     Sound.play('pop');
     const main = document.querySelector('.main');
@@ -1618,6 +1624,19 @@
       h('span', { class: 'switch' }, input, h('i')));
   }
 
+  function autoMenuRow() {
+    const input = h('input', { type: 'checkbox' });
+    input.checked = autoMenu();
+    input.addEventListener('change', () => {
+      try { localStorage.setItem('arcade.autoMenu', input.checked ? '1' : '0'); } catch {}
+      Sound.play(input.checked ? 'toggleOn' : 'toggleOff');
+      applySidebar();
+    });
+    return h('label', { class: 'setting', id: 'row-autoMenu' },
+      h('div', { class: 'setting-text' }, h('b', { text: 'Menu automatique' }), h('small', { text: 'Le menu se réduit tout seul quand la souris n\'est pas dessus, et se déploie dès que tu passes dessus.' })),
+      h('span', { class: 'switch' }, input, h('i')));
+  }
+
   function themeRow() {
     const opts = [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']];
     const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
@@ -1746,6 +1765,7 @@
       h('div', { class: 'set-group' },
         h('h2', { text: 'Apparence' }),
         themeRow(),
+        autoMenuRow(),
         accentRow(),
         logoRow(),
         switchRow('Fond animé', 'Grille pixel, lueurs et petits pixels qui scintillent derrière le lanceur (comme à l\'écran de chargement).', 'bgfx', () => applyAppearance()),
@@ -1796,6 +1816,11 @@
   $('#btn-ach').addEventListener('click', openAch);
   refreshNewsDot();
   $('#btn-collapse').addEventListener('click', toggleSidebar);
+  (() => {
+    const sb = $('.sidebar'); let t = null;
+    sb.addEventListener('mouseenter', () => { if (!autoMenu()) return; clearTimeout(t); document.body.classList.add('menu-open'); });
+    sb.addEventListener('mouseleave', () => { clearTimeout(t); t = setTimeout(() => document.body.classList.remove('menu-open'), 180); });
+  })();
   $('#btn-cats').addEventListener('click', openCatsModal);
   $('#btn-full').addEventListener('click', toggleFullscreen);
   $('#btn-brand').addEventListener('click', () => { if (state.settings.sidebarCollapsed) toggleSidebar(); });

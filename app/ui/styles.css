@@ -867,3 +867,10 @@ body.sb-collapsed .news-dot, body.collapsed .news-dot { left: 24px; }
 .ach-prog { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 .ach-prog span { font-size: 12px; color: var(--muted); }
 .ach-sum { padding: 0 26px; }
+
+/* ---------- Menu automatique : réduit par défaut, déployé au survol (par-dessus le contenu) ---------- */
+body.automenu .side-toggle { display: none; }
+body.automenu.menu-open .sidebar { width: var(--side-w); background: var(--panel); box-shadow: 18px 0 50px -18px rgba(0, 0, 0, .65); }
+body.automenu.menu-open .brand-name, body.automenu.menu-open .nav-item span, body.automenu.menu-open .nav-item em,
+body.automenu.menu-open .btn.block span, body.automenu.menu-open .side-title { opacity: 1; transform: none; }
+body.automenu.menu-open .cats { overflow-x: visible; }
