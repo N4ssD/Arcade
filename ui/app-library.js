@@ -347,6 +347,7 @@ function applyLogo(acc) {
           c.getContext('2d').drawImage(img, 0, 0, S, S);
           made.push([S, c.toDataURL('image/png')]);
         }
+        try { const big = made.find((m) => m[0] === 152) || made[made.length - 1]; api.setIcon(big[1]).catch(() => {}); } catch (_) {}
         document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
         for (const [S, href] of made) {
           const l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/png'; l.sizes = S + 'x' + S; l.href = href;

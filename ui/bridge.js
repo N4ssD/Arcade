@@ -63,6 +63,7 @@
     refreshIcon: (id) => call('refreshIcon', { id }),
     fetchCover: (id, opts = {}) => call('fetchCover', { id, ...opts }),
     detectLaunchers: () => call('detectLaunchers'),
+    setIcon: (png) => call('setIcon', { png }),
     perf: () => call('perf'),
     checkLibrary: () => call('checkLibrary'),
     mergeGames: (keep, remove) => call('mergeGames', { keep, remove }),

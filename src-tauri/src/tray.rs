@@ -22,7 +22,7 @@ pub(crate) fn build_tray(app: &tauri::AppHandle) -> Result<(), String> {
     let open = MenuItem::with_id(app, "open", "Ouvrir Arcade", true, None::<&str>).map_err(|e| e.to_string())?;
     let quit = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>).map_err(|e| e.to_string())?;
     let menu = Menu::with_items(app, &[&open, &quit]).map_err(|e| e.to_string())?;
-    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).map_err(|e| e.to_string())?;
+    let icon = current_icon().ok_or("Icône introuvable.")?;
     TrayIconBuilder::with_id("arcade")
         .icon(icon)
         .tooltip("Arcade")

@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.9.0', title: 'L\'icône suit ta couleur', items: ['L\'icône d\'Arcade dans la barre des tâches et dans la zone de notification prend maintenant la couleur d\'accent (ou la couleur du logo si tu en as choisi une).', 'Limite de Windows : si Arcade est épinglé dans la barre des tâches, l\'icône épinglée garde sa couleur d\'origine ; seule l\'icône de la fenêtre ouverte change.'] },
   { v: '2.8.3', title: 'Moteur : modules plus petits', items: ['Les commandes de la bibliothèque sont séparées des couvertures dans leur propre module.'] },
   { v: '2.8.2', title: 'Correctif de compilation', items: ['Finition du découpage du moteur en modules.'] },
   { v: '2.8.1', title: 'Moteur mieux rangé', items: ['Le code du moteur (Rust) est découpé en modules : utilitaires, réglages, bibliothèque, lancement, couvertures, installation, mises à jour, zone de notification… Rien ne change à l\'écran.'] },

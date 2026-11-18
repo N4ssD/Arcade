@@ -1,6 +1,6 @@
 [package]
 name = "arcade"
-version = "2.8.3"
+version = "2.9.0"
 description = "Arcade - lanceur de jeux"
 authors = ["N4ssD"]
 edition = "2021"

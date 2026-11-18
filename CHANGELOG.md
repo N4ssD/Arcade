@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.0 — The icon follows your color
+- The taskbar and notification-area icon now take your accent color (or your custom logo color).
+- Windows limit: a taskbar-pinned shortcut keeps its original icon; only the open window's icon changes.
+
 ## 2.8.3 — Smaller modules
 - Library commands moved out of the covers module into their own one.
 
