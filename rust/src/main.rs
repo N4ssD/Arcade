@@ -348,13 +348,15 @@ fn public_game(dir: &Path, g: &Obj) -> Value {
     let mut o = g.clone();
     let target = g.get("target").and_then(|x| x.as_str()).unwrap_or("");
     let exists = if is_uri(target) { true } else { Path::new(target).exists() };
-    let media = |field: &str, sub: &str, kind: &str| -> Value {
+    let media = |field: &str, sub: &str, _kind: &str| -> Value {
         let p = g.get(field).and_then(|x| x.as_str()).unwrap_or("");
         let f = file_name_of(p);
-        if !f.is_empty() && dir.join(sub).join(&f).is_file() {
-            json!(format!("{}/{}/{}", ARC_BASE, kind, url_enc(&f)))
-        } else {
-            Value::Null
+        if f.is_empty() || f.contains("..") {
+            return Value::Null;
+        }
+        match media_data_url(&dir.join(sub).join(&f)) {
+            Some(u) => json!(u),
+            None => Value::Null,
         }
     };
     o.insert("iconUrl".into(), media("icon", "icons", "icon"));
@@ -660,6 +662,43 @@ fn spawn_icon_jobs(app: tauri::AppHandle) {
             }
         }
     });
+}
+
+// Image -> data URL (mise en cache) : évite de dépendre du protocole personnalisé de la fenêtre
+fn media_data_url(path: &Path) -> Option<String> {
+    use base64::Engine;
+    use std::collections::HashMap;
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<Mutex<HashMap<String, (u64, String)>>> = OnceLock::new();
+    let meta = fs::metadata(path).ok()?;
+    if !meta.is_file() {
+        return None;
+    }
+    let stamp = meta.len() ^ meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0).rotate_left(32);
+    let key = path.to_string_lossy().to_string();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(c) = cache.lock() {
+        if let Some((s, u)) = c.get(&key) {
+            if *s == stamp {
+                return Some(u.clone());
+            }
+        }
+    }
+    let bytes = fs::read(path).ok()?;
+    let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let mime = match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "bmp" => "image/bmp",
+        _ => return None,
+    };
+    let url = format!("data:{};base64,{}", mime, base64::engine::general_purpose::STANDARD.encode(bytes));
+    if let Ok(mut c) = cache.lock() {
+        c.insert(key, (stamp, url.clone()));
+    }
+    Some(url)
 }
 
 fn media_response(dir: &Path, path: &str) -> tauri::http::Response<Vec<u8>> {
