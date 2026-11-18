@@ -1132,6 +1132,85 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             save(dir, db);
             Ok(json!({ "ok": true }))
         }
+        "checkLibrary" => {
+            let mut missing = vec![];
+            for g in &db.games {
+                let t = g.get("target").and_then(|x| x.as_str()).unwrap_or("");
+                if !t.is_empty() && !is_uri(t) && !Path::new(t).exists() {
+                    missing.push(json!({ "id": g.get("id"), "name": g.get("name"), "target": t }));
+                }
+            }
+            let info = |g: &Obj| json!({ "id": g.get("id"), "name": g.get("name"), "target": g.get("target"), "playtime": g.get("playtime"), "launches": g.get("launches") });
+            let mut groups: Vec<Value> = vec![];
+            let mut used: Vec<bool> = vec![false; db.games.len()];
+            for pass in 0..2 {
+                let key = |g: &Obj| -> String {
+                    let t = g.get("target").and_then(|x| x.as_str()).unwrap_or("");
+                    let n = g.get("name").and_then(|x| x.as_str()).unwrap_or("");
+                    if pass == 0 { t.to_lowercase().replace('/', "\\") } else { get_norm(n) }
+                };
+                let mut seen: Vec<(String, Vec<usize>)> = vec![];
+                for (i, g) in db.games.iter().enumerate() {
+                    if used[i] {
+                        continue;
+                    }
+                    let k = key(g);
+                    if k.is_empty() {
+                        continue;
+                    }
+                    match seen.iter_mut().find(|(x, _)| *x == k) {
+                        Some((_, v)) => v.push(i),
+                        None => seen.push((k, vec![i])),
+                    }
+                }
+                for (_, v) in seen.into_iter().filter(|(_, v)| v.len() > 1) {
+                    for &i in &v {
+                        used[i] = true;
+                    }
+                    groups.push(json!({ "reason": if pass == 0 { "target" } else { "name" }, "games": v.iter().map(|&i| info(&db.games[i])).collect::<Vec<_>>() }));
+                }
+            }
+            Ok(json!({ "ok": true, "missing": missing, "duplicates": groups }))
+        }
+        "mergeGames" => {
+            let keep = gs(body, "keep");
+            let ids: Vec<String> = body.get("remove").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect()).unwrap_or_default();
+            let ki = match find_game(db, &keep) {
+                Some(i) => i,
+                None => return Ok(json!({ "ok": false })),
+            };
+            for id in ids.iter().filter(|id| **id != keep) {
+                if let Some(i) = find_game(db, id) {
+                    let old = db.games.remove(i);
+                    let ki = find_game(db, &keep).unwrap_or(ki.min(db.games.len().saturating_sub(1)));
+                    let (pt, la, lp) = (gn(&Value::Object(old.clone()), "playtime"), gn(&Value::Object(old.clone()), "launches"), gn(&Value::Object(old.clone()), "lastPlayed"));
+                    let k = &mut db.games[ki];
+                    let kv = Value::Object(k.clone());
+                    k.insert("playtime".into(), json!(gn(&kv, "playtime") + pt));
+                    k.insert("launches".into(), json!(gn(&kv, "launches") + la));
+                    if lp > gn(&kv, "lastPlayed") {
+                        k.insert("lastPlayed".into(), json!(lp));
+                    }
+                    for f in ["favorite", "finished"] {
+                        if old.get(f).and_then(|x| x.as_bool()).unwrap_or(false) {
+                            k.insert(f.into(), json!(true));
+                        }
+                    }
+                    let kc = k.get("cover").and_then(|x| x.as_str()).map(file_name_of).unwrap_or_default();
+                    let ko = k.get("icon").and_then(|x| x.as_str()).map(file_name_of).unwrap_or_default();
+                    let oc = old.get("cover").and_then(|x| x.as_str()).unwrap_or("");
+                    let oi = old.get("icon").and_then(|x| x.as_str()).unwrap_or("");
+                    if file_name_of(oc) != kc {
+                        remove_media(dir, "covers", oc);
+                    }
+                    if file_name_of(oi) != ko {
+                        remove_media(dir, "icons", oi);
+                    }
+                }
+            }
+            save(dir, db);
+            Ok(json!({ "ok": true }))
+        }
         "remove" => {
             let id = gs(body, "id");
             match find_game(db, &id) {
@@ -1662,6 +1741,24 @@ mod inst {
         }
     }
 
+    // Désinstalle : raccourcis, démarrage Windows, registre, dossier d'installation (supprimé après la fermeture d'Arcade)
+    pub fn uninstall_core(dir: &Path, wipe: bool) {
+        kill_others(&dir.join("Arcade.exe"));
+        remove_shortcuts();
+        let _ = fs::remove_file(startup_lnk());
+        reg_delete();
+        if wipe {
+            let _ = fs::remove_dir_all(appdata_dir());
+        } else {
+            // on garde la bibliothèque : elle sera reprise à la prochaine installation
+            copy_dir(&dir.join("data"), &appdata_dir());
+        }
+        let _ = Command::new("cmd")
+            .raw_arg(format!("/c ping -n 4 127.0.0.1 >nul & rmdir /s /q \"{}\"", dir.to_string_lossy()))
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+    }
+
     pub fn uninstall() {
         use rfd::{MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
         let dir = match installed_dir() {
@@ -1681,20 +1778,7 @@ mod inst {
             "Désinstaller Arcade",
             "Supprimer aussi ta bibliothèque (jeux, couvertures, réglages) ?\n\nChoisis « Non » pour la garder si tu réinstalles Arcade plus tard.",
         );
-        kill_others(&dir.join("Arcade.exe"));
-        remove_shortcuts();
-        let _ = fs::remove_file(startup_lnk());
-        reg_delete();
-        if wipe {
-            let _ = fs::remove_dir_all(appdata_dir());
-        } else {
-            // on garde la bibliothèque : elle sera reprise à la prochaine installation
-            copy_dir(&dir.join("data"), &appdata_dir());
-        }
-        let _ = Command::new("cmd")
-            .raw_arg(format!("/c ping -n 4 127.0.0.1 >nul & rmdir /s /q \"{}\"", dir.to_string_lossy()))
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn();
+        uninstall_core(&dir, wipe);
         MessageDialog::new().set_title("Arcade").set_description("Arcade a été désinstallé.").set_level(MessageLevel::Info).show();
     }
 }
@@ -2162,6 +2246,30 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
     if name == "installUpdate" {
         return install_update_cmd(&app, &state.dir).await;
     }
+    if name == "uninstall" {
+        #[cfg(windows)]
+        {
+            if !inst::running_installed() {
+                return Err("Arcade n'est pas installé : rien à désinstaller.".into());
+            }
+            let wipe = gb(&body, "wipe");
+            if let Ok(db) = state.db.lock() {
+                save(&state.dir, &db);
+            }
+            if let Some(dir) = inst::installed_dir() {
+                log(&state.dir, &format!("Désinstallation (supprimer la bibliothèque : {})", wipe));
+                inst::uninstall_core(&dir, wipe);
+            }
+            let h = app.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(400));
+                h.exit(0);
+            });
+            return Ok(json!({ "ok": true }));
+        }
+        #[cfg(not(windows))]
+        return Err("Disponible uniquement sous Windows.".into());
+    }
     if name == "fetchCover" {
         return fetch_cover_cmd(&state, &body).await;
     }
@@ -2197,6 +2305,10 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
         if let (Ok(v), Ok(runs)) = (&mut res, state.running.lock()) {
             let ids: Vec<Value> = runs.iter().filter(|(_, r)| r.watch.is_none() || r.seen).map(|(k, _)| json!(k)).collect();
             v["running"] = Value::Array(ids);
+        }
+        #[cfg(windows)]
+        if let Ok(v) = &mut res {
+            v["installed"] = json!(inst::running_installed());
         }
     }
     if name == "add" {

@@ -175,6 +175,7 @@
     state.categories = lib.categories || [];
     state.daily = lib.daily || {};
     state.running = new Set(lib.running);
+    state.installed = !!lib.installed;
     state.settings = { ...state.settings, ...lib.settings };
     checkVersion(lib.version);
     applyCardSize(state.settings.cardSize);
@@ -1044,7 +1045,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
-    { v: '2.1.0', title: 'Mises à jour automatiques', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.'] },
+    { v: '2.1.0', title: 'Mises à jour automatiques', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.', 'Nouveau dans les réglages : « Vérifier la bibliothèque » (jeux introuvables et doublons, avec fusion) et « Désinstaller Arcade » (avec ou sans ta bibliothèque).'] },
     { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu, et se rouvre tout seul quand le jeu se ferme.', 'Un clic sur le logo change le mode du menu : automatique, déplié en permanence ou fermé en permanence.', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
@@ -1066,6 +1067,60 @@
           h('ul', {}, e.items.map((t) => h('li', { text: t })))))),
       h('div', { class: 'modal-foot' }, h('button', { class: 'btn primary', onClick: closeModal, text: 'Fermer' }))
     ));
+  }
+
+  // ---------- Vérification de la bibliothèque ----------
+  const hoursOf = (s) => (Math.round((s || 0) / 360) / 10) + ' h';
+  async function libraryCheck(silent) {
+    let r;
+    try { r = await api.checkLibrary(); } catch (e) { return toast(e.message || String(e), 'error'); }
+    const miss = r.missing || [], groups = r.duplicates || [];
+    if (!miss.length && !groups.length) { if (!silent) toast('Tout est en ordre : aucun jeu introuvable, aucun doublon.', 'ok'); else closeModal(); return; }
+    const sec = [];
+    if (miss.length) {
+      sec.push(h('div', { class: 'chk-sec' },
+        h('h4', { text: `Jeux introuvables (${miss.length})` }),
+        h('p', { class: 'dim', text: 'Le fichier du jeu n\'existe plus à son emplacement. Si le jeu est sur un disque externe, branche-le d\'abord.' }),
+        h('div', { class: 'chk-list' }, ...miss.map((g) => h('div', { class: 'chk-item' }, h('b', { text: g.name }), h('small', { class: 'dim', text: g.target })))),
+        h('button', { class: 'btn danger', text: `Retirer ces ${miss.length} jeu${miss.length > 1 ? 'x' : ''}`, onClick: async () => {
+          for (const g of miss) await api.removeGame(g.id);
+          Sound.play('delete'); await load(); libraryCheck(true);
+        } })));
+    }
+    if (groups.length) {
+      sec.push(h('div', { class: 'chk-sec' },
+        h('h4', { text: `Doublons (${groups.length})` }),
+        h('p', { class: 'dim', text: 'Fusionner garde le jeu le plus joué : les temps de jeu et les lancements sont additionnés.' }),
+        ...groups.map((gr) => {
+          const best = [...gr.games].sort((x, y) => (y.playtime || 0) - (x.playtime || 0))[0];
+          return h('div', { class: 'chk-group' },
+            h('div', { class: 'chk-list' }, ...gr.games.map((g) => h('div', { class: 'chk-item' }, h('b', { text: g.name }), h('small', { class: 'dim', text: hoursOf(g.playtime) + ' · ' + (g.target || '') })))),
+            h('button', { class: 'btn', text: 'Fusionner', onClick: async () => {
+              await api.mergeGames(best.id, gr.games.map((g) => g.id).filter((x) => x !== best.id));
+              toast('Doublon fusionné.', 'ok'); await load(); libraryCheck(true);
+            } }));
+        })));
+    }
+    openModal(h('div', { class: 'modal chk-modal' },
+      h('h3', { text: 'Vérification de la bibliothèque' }),
+      h('div', { class: 'modal-body' }, ...sec),
+      h('div', { class: 'modal-foot' }, h('button', { class: 'btn ghost', onClick: closeModal, text: 'Fermer' }))));
+  }
+
+  function confirmUninstall() {
+    const go = async (wipe) => {
+      try { await api.uninstall(wipe); toast('Désinstallation en cours…'); }
+      catch (e) { toast(e.message || String(e), 'error'); }
+    };
+    openModal(h('div', { class: 'modal' },
+      h('h3', { text: 'Désinstaller Arcade ?' }),
+      h('div', { class: 'modal-body' },
+        h('p', { text: 'Arcade se ferme et son dossier d\'installation est supprimé, ainsi que les raccourcis et le démarrage avec Windows.' }),
+        h('p', { text: 'Les fichiers de tes jeux ne sont pas touchés.' })),
+      h('div', { class: 'modal-foot' },
+        h('button', { class: 'btn ghost', onClick: closeModal, text: 'Annuler' }),
+        h('button', { class: 'btn', text: 'Désinstaller et garder ma bibliothèque', onClick: () => go(false) }),
+        h('button', { class: 'btn danger', text: 'Tout supprimer', onClick: () => go(true) }))));
   }
 
   function confirmReset() {
@@ -1808,6 +1863,13 @@
         h('h2', { text: 'Couvertures' }),
         switchRow('Couvertures automatiques', 'À l\'ajout d\'un jeu, télécharge une couverture HD depuis Steam. Seul le nom du jeu est envoyé.', 'autoCovers'),
         h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Couvertures manquantes' }), h('small', { text: 'Relance la recherche pour les jeux sans image.' })), missing)
+      ),
+      h('div', { class: 'set-group' },
+        h('h2', { text: 'Entretien' }),
+        h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Vérifier la bibliothèque' }), h('small', { text: 'Repère les jeux dont le fichier a disparu et les jeux ajoutés en double, et te propose de les nettoyer.' })),
+          h('button', { class: 'btn ghost', text: 'Vérifier', 'data-snd': 'none', onClick: () => libraryCheck(false) })),
+        state.installed ? h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Désinstaller Arcade' }), h('small', { text: 'Supprime Arcade de ton ordinateur. Tu peux garder ta bibliothèque pour une future installation.' })),
+          h('button', { class: 'btn danger', text: 'Désinstaller', 'data-snd': 'none', onClick: confirmUninstall })) : null
       ),
       h('div', { class: 'set-group danger-zone' },
         h('h2', { text: 'Réinitialisation' }),

@@ -890,3 +890,12 @@ body.automenu.menu-open .sidebar { box-shadow: none; }
 .upd-t small { color: var(--muted, #9A9AAE); font-size: 12px; }
 .upd-b { display: flex; gap: 8px; flex-shrink: 0; }
 @keyframes updIn { from { opacity: 0; transform: translateY(14px); } }
+
+.chk-modal { width: min(640px, 94vw); }
+.chk-modal .modal-body { max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 18px; }
+.chk-sec h4 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.chk-sec p { margin: 0 0 10px; font-size: 13px; }
+.chk-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.chk-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border, #3A3A48); }
+.chk-item small { word-break: break-all; }
+.chk-group { margin-bottom: 12px; }
