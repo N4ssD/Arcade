@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.1 — Collect your coins
+- Achievements: a "Collect" button on each unlocked achievement and "Collect all" at the top to cash in the coins.
+- The strip's Customize button is smaller.
+
 ## 2.7.0 — 101 achievements and coin rewards
 - 80+ new achievements: play time, streaks, days played, big sessions, different games, night or morning launches, customization, avatar, shop, levels, coins, and even achievements about achievements.
 - Every achievement now pays coins by tier: 10 (bronze), 25 (silver), 50 (gold) or 100 (legend), to spend in the avatar shop.

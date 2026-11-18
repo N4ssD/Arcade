@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.7.0';
+  const APP_VERSION = '2.7.1';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1147,7 +1147,16 @@
     clearTimeout(bumpT); bumpT = setTimeout(() => api.setSettings({ counters: state.settings.counters }).catch(() => {}), 800);
     clearTimeout(evalT); evalT = setTimeout(evalAchievements, 700);
   }
-  const rewardSum = (done) => ACH.reduce((s, a) => s + (done[a.id] ? a.reward : 0), 0);
+  const claimedIds = () => (AV ? avData().claimed : []);
+  const rewardSum = (done) => { const c = claimedIds(); return ACH.reduce((s, a) => s + (done[a.id] && c.includes(a.id) ? a.reward : 0), 0); };
+  async function claimAch(ids) {
+    const done = achDone(), d = avData(), have = new Set(d.claimed);
+    const add = ACH.filter((a) => ids.includes(a.id) && done[a.id] && !have.has(a.id));
+    if (!add.length) return;
+    const gain = add.reduce((s, a) => s + a.reward, 0);
+    d.claimed = [...d.claimed, ...add.map((a) => a.id)];
+    try { await setSetting({ avatar: d }); Sound.play('success'); toast('+' + gain + ' pièces récupérées', 'ok'); renderAvatar(); openAch(); } catch (e) { toast(e.message || String(e), 'error'); }
+  }
   // Statistiques brutes. `since` (numéro de jour) limite certaines mesures aux jours postérieurs à la première ouverture.
   function achStats(done, base) {
     done = done || achDone();
@@ -1225,12 +1234,14 @@
   function openAch() {
     const base = achBase(), st = achStats(achDone(), base), done = achDone();
     const total = ACH.length, got = ACH.filter((a) => done[a.id]).length, won = rewardSum(done);
+    const cl = claimedIds(), pending = ACH.filter((a) => done[a.id] && !cl.includes(a.id)), pendSum = pending.reduce((s, a) => s + a.reward, 0);
     const list = ACH.filter((a) => achFilter === 'all' || (achFilter === 'done' ? !!done[a.id] : !done[a.id]));
     const tab = (id, label) => h('button', { class: 'ach-tab' + (achFilter === id ? ' on' : ''), 'data-snd': 'tick', text: label, onClick: () => { achFilter = id; openAch(); } });
     openModal(h('div', { class: 'modal ach-modal' },
       h('h3', { text: 'Succès' }),
       h('div', { class: 'ach-sum' }, h('div', { class: 'ach-sum-top' }, h('b', { text: got + ' / ' + total + ' débloqués' }), h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), won + ' pièces gagnées')),
         h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(2, Math.round(got / total * 100)) + '%' } }))),
+      pending.length ? h('div', { class: 'ach-claim' }, h('span', {}, h('i', { class: 'av-coin' }), pendSum + ' pièces à récupérer'), h('button', { class: 'btn primary', 'data-snd': 'none', text: 'Tout récupérer', onClick: () => claimAch(pending.map((a) => a.id)) })) : null,
       h('div', { class: 'ach-tabs' }, tab('all', 'Tous'), tab('todo', 'À débloquer'), tab('done', 'Débloqués')),
       h('div', { class: 'modal-body ach-grid' }, list.map((a) => {
         const ok = !!done[a.id], cur = Math.min(achVal(a, st, base), a.goal);
@@ -1239,7 +1250,8 @@
           h('div', { class: 'ach-tx' },
             h('div', { class: 'ach-name' }, h('b', { text: achName(a) }), h('span', { class: 'ach-rw' }, h('i', { class: 'av-coin' }), '+' + a.reward)),
             h('small', { text: achDesc(a) }),
-            ok ? h('span', { class: 'ach-date', text: 'Débloqué le ' + done[a.id].split('-').reverse().join('/') })
+            ok ? h('div', { class: 'ach-done' }, h('span', { class: 'ach-date', text: 'Débloqué le ' + done[a.id].split('-').reverse().join('/') }),
+                 cl.includes(a.id) ? h('span', { class: 'ach-got', text: 'Récupéré' }) : h('button', { class: 'btn primary ach-take', 'data-snd': 'none', text: 'Récupérer', onClick: () => claimAch([a.id]) }))
                : h('div', { class: 'ach-prog' }, h('div', { class: 'd-bar' }, h('i', { style: { width: Math.round(cur / a.goal * 100) + '%' } })), h('span', { text: achFmt(a, cur) + ' / ' + achFmt(a, a.goal) + ' ' + achUnit(a) }))));
       })),
       h('div', { class: 'modal-foot' }, h('button', { class: 'btn primary', onClick: closeModal, text: 'Fermer' }))
@@ -1344,7 +1356,7 @@
       h('span', { class: 'av-sp' }),
       h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), String(avCoins(a))),
       h('div', { class: 'av-lvl' }, h('div', {}, h('span', { text: 'Niv. ' + pr.level }), h('em', { text: Math.round(pr.pct * 100) + ' %' })), h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(3, Math.round(pr.pct * 100)) + '%' } }))),
-      h('button', { class: 'btn primary', text: 'Personnaliser', onClick: openAvatarEditor }),
+      h('button', { class: 'btn primary av-edit', text: 'Personnaliser', onClick: openAvatarEditor }),
       h('button', { class: 'av-x', title: 'Masquer la bande', 'aria-label': 'Masquer la bande', 'data-snd': 'none', text: '✕', onClick: () => { setSetting({ avatarPanel: false }); renderAvatar(); } }));
   }
   function toggleAvatarPanel() {
@@ -1386,7 +1398,7 @@
           d = { ...d, skin: r(AV.SKINS), hair: r(AV.HAIRS), hs: r(ok('hair')), face: r(ok('face')), top: r(ok('top')), topC: r(AV.CLOTHES), bottom: r(ok('bottom')), bottomC: r(AV.BOTTOMS), shoes: r(ok('shoes')), shoesC: r(AV.SHOES), acc: r(ok('acc')), bg: r(ok('bg')) };
           Sound.play('pop'); paint();
         } }),
-        h('button', { class: 'btn ghost', text: 'Réinitialiser', 'data-snd': 'none', onClick: () => { d = { ...AV.sanitize({}), owned: d.owned, spent: d.spent }; paint(); } })));
+        h('button', { class: 'btn ghost', text: 'Réinitialiser', 'data-snd': 'none', onClick: () => { d = { ...AV.sanitize({}), owned: d.owned, spent: d.spent, claimed: d.claimed }; paint(); } })));
       coinEl.replaceChildren(h('i', { class: 'av-coin' }), coins() + ' pièces');
       side.replaceChildren(...AV_CATS.map((c) => h('button', { class: 'av-cat' + (c.id === cat ? ' on' : ''), 'data-snd': 'nav', text: c.n, onClick: () => { cat = c.id; paint(); } })));
       const c = AV_CATS.find((x) => x.id === cat);
@@ -1420,6 +1432,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.7.1', title: 'Récupérer ses pièces', items: ['Succès : un bouton « Récupérer » sur chaque succès débloqué, et « Tout récupérer » en haut, pour encaisser les pièces.', 'Le bouton Personnaliser de la bande est plus discret.'] },
     { v: '2.7.0', title: '101 succès et des pièces à gagner', items: ['Plus de 80 nouveaux succès : temps de jeu, séries, jours joués, grosses sessions, jeux différents, lancements de nuit ou du matin, personnalisation, avatar, boutique, niveaux, pièces, et même des succès sur les succès.', 'Chaque succès rapporte des pièces selon son palier : 10 (bronze), 25 (argent), 50 (or) ou 100 (légende), à dépenser dans la boutique de l\'avatar.', 'Rien n\'est débloqué d\'avance : à ta première ouverture, Arcade note où tu en es, et seuls tes progrès à partir de là comptent (les 18 succès d\'origine gardent leur calcul habituel si tu les avais déjà).', 'Fenêtre Succès : filtres Tous / À débloquer / Débloqués, récompense de chaque succès et total de pièces gagnées.'] },
     { v: '2.6.0', title: 'Plus de looks, avatar plus fluide', items: ['5 nouvelles coiffures (queue de cheval, chignon, carré, crête, afro), 5 nouveaux hauts (débardeur, chemise, hawaï, salopette, armure) et une jupe.', 'Animations refaites : respiration douce, clignement des yeux, tête et bras qui bougent avec un léger décalage, saut avec écrasement quand il est content, tête qui penche quand il dort, pied qui tape quand il s\'impatiente.'] },
     { v: '2.5.1', title: 'Barre d\'outils harmonisée', items: ['Recherche, tri, Catégories, Surprends-moi et Plein écran ont maintenant la même hauteur, le même arrondi et le même fond.', 'La flèche de la liste de tri est décollée du bord.'] },

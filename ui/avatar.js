@@ -42,6 +42,7 @@
       skin: col('skin'), hair: col('hair'), hs: pick('hs', 'hair'), face: pick('face', 'face'), top: pick('top', 'top'), topC: col('topC'),
       bottom: pick('bottom', 'bottom'), bottomC: col('bottomC'), shoes: pick('shoes', 'shoes'), shoesC: col('shoesC'), acc: pick('acc', 'acc'), bg: pick('bg', 'bg'),
       owned: Array.isArray(r.owned) ? r.owned.filter((x) => all.includes(x)) : [],
+      claimed: Array.isArray(r.claimed) ? r.claimed.filter((x) => typeof x === 'string' && x.length <= 24).slice(0, 200) : [],
       spent: Number.isFinite(r.spent) ? Math.max(0, Math.floor(r.spent)) : 0,
     };
   }
