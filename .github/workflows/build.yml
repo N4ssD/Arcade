@@ -23,8 +23,8 @@ jobs:
       - name: Lire et vérifier la version
         id: ver
         run: |
-          PS_VER=$(grep -oP "\$script:Version\s*=\s*'\K[^']+" app/Arcade.ps1)
-          JS_VER=$(grep -oP "APP_VERSION\s*=\s*'\K[^']+" app/ui/app.js)
+          PS_VER=$(grep -m1 -oP '\$script:Version\s*=\s*\x27\K[^\x27]+' app/Arcade.ps1 | tr -d '\r')
+          JS_VER=$(grep -m1 -oP 'APP_VERSION\s*=\s*\x27\K[^\x27]+' app/ui/app.js | tr -d '\r')
           echo "Arcade.ps1 = $PS_VER | app.js = $JS_VER"
           if [ "$PS_VER" != "$JS_VER" ]; then echo "::error::Les versions de Arcade.ps1 et app.js doivent être identiques"; exit 1; fi
           if [[ "$GITHUB_REF" == refs/tags/v* && "${GITHUB_REF#refs/tags/v}" != "$PS_VER" ]]; then
