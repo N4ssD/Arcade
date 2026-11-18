@@ -353,10 +353,16 @@ body.booting .card { animation-play-state: paused; }
 .pcol { position: relative; width: 28px; height: 28px; border-radius: 50%; background: var(--c); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(var(--fg-rgb), .12); transition: transform .12s; cursor: pointer; }
 .pcol:hover { transform: scale(1.14); }
 .pcol.on { border-color: var(--strong); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
-.pcol.custom { background: conic-gradient(#ff6b6b, #ffd166, #58d68d, #5ec2ff, #9c7cf0, #ff6b9a, #ff6b6b); overflow: hidden; }
-.pcol.custom.on { background: var(--c); }
-.pcol.custom::after { content: "+"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--strong); font-weight: 700; font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
-.pcol.custom.on::after { content: "\270E"; font-size: 13px; }
+.pcol.custom { background: var(--sunk); border: 1.5px dashed color-mix(in srgb, var(--muted) 70%, transparent); box-shadow: none; overflow: hidden; transition: transform .12s, border-color .15s, background .15s; }
+.pcol.custom::after { content: ""; position: absolute; inset: 0; margin: auto; width: 12px; height: 12px; background: var(--muted); transition: background .15s;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14' stroke='black' stroke-width='3' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14' stroke='black' stroke-width='3' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") center / contain no-repeat; }
+.pcol.custom:hover { border-color: var(--accent); }
+.pcol.custom:hover::after { background: var(--accent); }
+.pcol.custom.on { background: var(--c); border: 2px solid var(--strong); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
+.pcol.custom.on::after { width: 13px; height: 13px; background: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.65));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z' stroke='black' stroke-width='2.4' stroke-linejoin='round' fill='black'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z' stroke='black' stroke-width='2.4' stroke-linejoin='round' fill='black'/%3E%3C/svg%3E") center / contain no-repeat; }
 .pcol.custom input { position: absolute; inset: -6px; width: 44px; height: 44px; opacity: 0; cursor: pointer; }
 .icongrid { display: grid; grid-template-columns: repeat(auto-fill, 40px); gap: 7px; }
 .ibtn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); display: grid; place-items: center; transition: color .15s, background .15s, border-color .15s, transform .12s; }
