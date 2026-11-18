@@ -1,74 +1,124 @@
+<div align="center">
+
 # Arcade
 
-Un lanceur de jeux moderne pour Windows, en français : ta bibliothèque, tes statistiques, tes succès, au même endroit.
-**Un seul fichier à télécharger, `ArcadeSetup.exe`** : pas besoin d'Edge, de PowerShell ni d'installer quoi que ce soit d'autre.
+**A fast, good-looking game launcher for Windows.**
+Your library, your play time and your achievements, in one place.
 
-## Fonctionnalités
+[**⬇ Download ArcadeSetup.exe**](https://github.com/N4ssD/Arcade/releases/download/dernier/ArcadeSetup.exe) · [Releases](../../releases) · [Changelog](CHANGELOG.md)
 
-- Bibliothèque avec pochettes HD automatiques (Steam), icônes des jeux, catégories, favoris, recherche et tri
-- Ajout par **glisser-déposer** (raccourcis `.lnk` / `.url`, `.exe`), par sélecteur de fichier ou par scan d'un dossier
-- Import automatique des jeux **Steam, Epic et GOG**, **temps de jeu en direct**, rappel de pause, démarrage avec Windows et zone de notification, Arcade se réduit quand tu lances un jeu
-- Rangée **Reprendre**, bouton **Surprends-moi**, zoom précis des cases
-- **Français et English** au choix (Paramètres > Apparence)
-- **Menu automatique** : il se réduit tout seul et pousse le contenu au survol
-- **18 succès** à débloquer, historique des **nouveautés** par version
-- Thèmes, couleur d'accent et logo personnalisables ; réglages **Performance** pour couper animations et effets
-- Installeur intégré (choix du dossier, raccourcis, mise à jour, désinstallation) et bouton « Tout réinitialiser »
-- Tes données restent sur ton PC, dans le sous-dossier `data` du dossier d'installation (aucun compte, aucun envoi, à part le nom d'un jeu pour chercher sa pochette)
+![Arcade library](docs/screenshots/library.png)
 
-L'ancienne version complète (PowerShell) reste disponible dans la branche [`powershell-1.19`](../../tree/powershell-1.19).
+</div>
 
-## Télécharger
+Arcade is a standalone desktop app written in **Rust** ([Tauri 2](https://tauri.app)). One small installer, no accounts, no telemetry, nothing else to install.
+Add your games from anywhere (Steam, Epic, GOG, plain `.exe` files, shortcuts), and Arcade keeps track of how long you play.
 
-1. Télécharge **[ArcadeSetup.exe](../../releases/download/dernier/ArcadeSetup.exe)** (page [Releases](../../releases)).
-2. Lance-le : la fenêtre d'installation te laisse choisir le dossier et les raccourcis. L'application installée s'appelle `Arcade.exe`.
+## Screenshots
 
-> **Windows peut afficher « Windows a protégé votre ordinateur » (SmartScreen).**
-> L'exe n'est pas encore signé numériquement : ce n'est pas un signe de virus.
-> Clique sur **Informations complémentaires** puis **Exécuter quand même**, ou lis tout le code ici.
+> Screenshots use demo data and original artwork made for this page.
 
-Après l'installation, le dossier contient :
-
-| Fichier | Rôle |
+| | |
 |---|---|
-| `Arcade.exe` | L'application |
-| `data\library.json` | Ta bibliothèque et tes réglages |
-| `data\covers`, `data\icons` | Pochettes et icônes |
-| `data\arcade.log` | Journal, utile en cas de problème |
+| ![Game page](docs/screenshots/game-details.png) | ![Statistics](docs/screenshots/statistics.png) |
+| **Game page** with play time, last session and launches | **Live statistics**: streaks, weekly trend, most played, by category |
+| ![Achievements](docs/screenshots/achievements.png) | ![Import](docs/screenshots/import-games.png) |
+| **18 achievements** to unlock | **One-click import** of your Steam, Epic and GOG games |
+| ![Compact menu](docs/screenshots/library-compact-menu.png) | ![Light theme](docs/screenshots/library-light.png) |
+| **Auto-hiding menu** that pushes the content as it opens | **Light and dark themes**, any accent color |
 
-Pour désinstaller : Paramètres Windows > Applications > Arcade.
+![Settings](docs/screenshots/settings.png)
 
-## De quoi est fait Arcade ?
+## Features
 
-- **Rust** ([Tauri 2](https://tauri.app)) : l'application, la fenêtre, la bibliothèque, le lancement des jeux, les pochettes, l'installeur.
-- **HTML / CSS / JavaScript** : l'interface, affichée dans la fenêtre de l'application (WebView2, déjà présent dans Windows 10 et 11). C'est pour ça que GitHub affiche aussi du JavaScript et du CSS : c'est le dessin de l'écran, pas un autre programme.
-- Un petit script PowerShell (`src-tauri/src/icon.ps1`) sert uniquement à extraire l'icône des jeux.
+**Library**
+- Automatic HD covers (from Steam), game icons, categories with colors and icons, favorites, search and sorting
+- Add games by **drag and drop** (`.exe`, `.lnk`, `.url`), with the file picker, or by scanning a folder
+- Import installed games from **Steam, Epic Games and GOG**
+- A **Resume** row for what you played last, and a **Surprise me** button when you cannot decide
+- **Library check**: finds games whose file disappeared and duplicates, and merges them (play time is added up)
 
-## Compiler
+**Play**
+- **Live play time** and statistics, with optional break reminders
+- Launch arguments and **run as administrator**, per game
+- Arcade minimizes itself while you play and **comes back when the game closes**
+- Starts with Windows, can stay in the **notification area**
 
-Rien à installer sur ton PC : **GitHub Actions** compile l'exe (onglet **Actions**). À chaque *push* sur `main`, la dernière version est publiée dans la Release `dernier`.
+**Look and feel**
+- **English and French** (Settings > Appearance)
+- Dark, light or automatic theme, custom accent color and logo color
+- Auto-hiding menu, expanded or collapsed on demand (click the logo to cycle between *auto*, *always open* and *always closed*)
+- Optional animated background, ambient glow and idle slideshow; a power-saving mode pauses animations while a game runs
+- Pixel-art typography ([Silkscreen](https://github.com/googlefonts/silkscreen) and [Outfit](https://github.com/Outfitio/Outfit-Fonts)), gamepad navigation, TV mode
 
-Compilation locale (Windows, Rust installé) :
+**Installer and updates**
+- Built-in installer: pick the folder, shortcuts, update and uninstall (also from Settings)
+- **Automatic updates**: Arcade checks for a new version and installs it in one click
+- Your data stays on your PC, in the `data` folder inside the install folder
+
+## Download
+
+1. Download **[ArcadeSetup.exe](https://github.com/N4ssD/Arcade/releases/download/dernier/ArcadeSetup.exe)** from the [Releases](../../releases) page.
+2. Run it. The installer lets you choose the folder and the shortcuts. The installed app is called `Arcade.exe`.
+
+> **Windows may show "Windows protected your PC" (SmartScreen).**
+> The executable is not code-signed yet, which is normal for a small open-source project and not a sign of malware.
+> Click **More info**, then **Run anyway**, or read the whole source code here.
+
+Requirements: Windows 10 or 11 (64-bit). The WebView2 runtime is already included with both.
+
+After installation the folder contains:
+
+| File | Purpose |
+|---|---|
+| `Arcade.exe` | The application |
+| `data\library.json` | Your library and settings |
+| `data\covers`, `data\icons` | Cover art and game icons |
+| `data\arcade.log` | Log file, useful if something goes wrong |
+
+To uninstall: Windows Settings > Apps > Arcade, or Arcade's own Settings > Maintenance.
+
+## Privacy
+
+Arcade has no account and no telemetry. It only goes online for two things:
+
+- **Covers**: the name of a game is sent to the Steam store search to find its cover (can be turned off in Settings).
+- **Updates**: Arcade reads the latest version number from this repository and downloads `ArcadeSetup.exe` from the Releases page when you accept an update (can be turned off in Settings).
+
+## Built with
+
+- **Rust** ([Tauri 2](https://tauri.app)): the app itself, the window, the library, launching games, covers, the installer and the updater.
+- **HTML / CSS / JavaScript**: the interface, displayed in the app window (WebView2). It has no dependencies and no build step. This is why GitHub also lists JavaScript and CSS: it is the drawing of the screen, not a separate program.
+- A small PowerShell script (`src-tauri/src/icon.ps1`), used only to extract game icons.
+
+The previous complete version (PowerShell) is still available in the [`powershell-1.19`](../../tree/powershell-1.19) branch.
+
+## Build from source
+
+Nothing needs to be installed on your PC: **GitHub Actions** builds the executable (see the **Actions** tab). Every push to `main` publishes the latest build to the `dernier` release.
+
+Local build (Windows, with Rust installed):
 
 ```
 cargo build --release --manifest-path src-tauri/Cargo.toml
 ```
 
-L'exe est alors dans `src-tauri/target/release/arcade.exe`.
+The executable is then in `src-tauri/target/release/arcade.exe`. Running it from there starts the installer; run it with `--portable` to skip the installer.
 
-## Structure du dépôt
+## Repository layout
 
-| Dossier | Contenu |
+| Folder | Content |
 |---|---|
-| `src-tauri/` | Le code Rust (`src/main.rs`), la configuration Tauri et les icônes |
-| `ui/` | L'interface (HTML, CSS, JavaScript sans dépendance) et les polices embarquées |
-| `.github/workflows/` | Compilation et publication automatiques |
+| `src-tauri/` | The Rust code (`src/main.rs`), the Tauri configuration and the icons |
+| `ui/` | The interface (HTML, CSS, dependency-free JavaScript) and the embedded fonts |
+| `docs/screenshots/` | The images used on this page |
+| `.github/workflows/` | Automatic build and publishing |
 
-## Changer de version
+## Releasing a new version
 
-Même numéro dans `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `VERSION` dans `src-tauri/src/main.rs` et `APP_VERSION` dans `ui/app.js`.
-Ajoute aussi une entrée dans `CHANGELOG.md` et dans la liste `CHANGELOG` de `ui/app.js` (bouton « Nouveautés »).
+Use the same version number in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `VERSION` in `src-tauri/src/main.rs` and `APP_VERSION` in `ui/app.js`.
+Also add an entry to `CHANGELOG.md` and to the `CHANGELOG` list in `ui/app.js` (the "What's new" button). The updater compares the version in `src-tauri/Cargo.toml` on `main` with the installed one.
 
-## Licence
+## License
 
-[MIT](LICENSE) © N4ssD. Polices : voir [NOTICE.md](NOTICE.md).
+[MIT](LICENSE) © N4ssD. Fonts: see [NOTICE.md](NOTICE.md).

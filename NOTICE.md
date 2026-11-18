@@ -1,9 +1,11 @@
-# Crédits et licences tierces
+# Credits and third-party licenses
 
-Arcade embarque deux polices, toutes deux sous licence **SIL Open Font License 1.1** :
+Arcade embeds two fonts, both under the **SIL Open Font License 1.1**:
 
-- **Silkscreen** : titres, boutons et libellés pixel (licence : `ui/fonts/Silkscreen-OFL.txt`)
-- **Outfit** : textes courants (licence : `ui/fonts/Outfit-OFL.txt`)
+- **Silkscreen**: pixel titles, buttons and labels (license: `ui/fonts/Silkscreen-OFL.txt`)
+- **Outfit**: body text (license: `ui/fonts/Outfit-OFL.txt`)
 
-Les couvertures de jeux sont récupérées à la demande depuis Steam (seul le nom du jeu est envoyé) ;
-elles appartiennent à leurs ayants droit et ne sont pas redistribuées avec Arcade.
+Game covers are fetched on demand from Steam (only the game name is sent).
+They belong to their respective owners and are not redistributed with Arcade.
+
+The screenshots in `docs/screenshots/` use demo data and original artwork created for this repository.

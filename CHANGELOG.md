@@ -1,36 +1,66 @@
-# Historique des versions
+# Changelog
 
-## 2.0.0 — Arcade devient une vraie application
-- Réécrit en Rust (Tauri) : Arcade a sa propre fenêtre, sans Edge ni serveur PowerShell.
-- `ArcadeSetup.exe` : choix du dossier d'installation ; les données sont rangées dans le sous-dossier `data`.
-- Menu automatique : réduit au repos, il pousse le contenu vers la droite au survol (réglable).
-- Glisser-déposer de raccourcis (`.lnk`, `.url`) et de `.exe`.
-- Temps de jeu en direct, rappel de pause, import Steam / Epic / GOG.
-- Arcade se réduit quand un jeu se lance (réglable).
-- Démarrage avec Windows et zone de notification.
-- Choix de la langue : français ou anglais.
+## 2.3.4 — Menu separators
+- Collapsed menu: separators are now thin lines that fade at both ends, centered, with equal spacing above and below.
 
-## 1.19.0 — Succès Arcade
-- Bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d'affilée, favoris, jeux terminés…).
-- Notification à chaque succès débloqué ; la progression est enregistrée dans les réglages.
+## 2.3.3 — Menu
+- Collapsed menu: thin separator lines between groups.
+- The "what's new" dot no longer covers the What's new icon (it sits in its corner).
+- New icon for "Scan a folder" (folder with a magnifier) so it is no longer confused with categories.
 
-## 1.18.0 — Nouveautés
-- Bouton « Nouveautés » : historique des changements de chaque version, avec un point d'alerte à chaque nouvelle version.
+## 2.3.2 — Custom color
+- The "custom color" button (the rainbow circle) is replaced by a discreet dashed circle with a "+". Once a color is picked it takes that color and shows a pencil.
 
-## 1.17.0 — Réinitialisation et installeur
-- Paramètres > Réinitialisation : remet Arcade à neuf (bibliothèque, catégories, statistiques, couvertures, réglages).
-- `Arcade.exe` : installeur avec choix du dossier, raccourcis Bureau / menu Démarrer, mise à jour et désinstallation.
+## 2.3.1 — Polish
+- Performance panel: better spacing around the cards.
+- The performance indicator now shows in the menu when it opens.
 
-## 1.16.0 — Fiche d'un jeu refaite
-- Fond coloré, grande jaquette lumineuse, boutons mieux rangés, statistiques avec icônes et barre de temps de jeu.
-- Bouton « Terminé » et bouton pour copier le chemin du jeu.
+## 2.3.0 — Performance
+- New "Performance" panel in Settings: memory (display engine included), processor and startup time, measured live.
+- Power-saving mode: animations pause when the window is hidden or while a game runs. Optional indicator at the bottom of the menu.
+- Arcade comes back much faster when you quit a game.
+- Faster install: files are copied in parallel and there is less waiting.
 
-## 1.15.x — Performance et finitions
-- Paramètres > Performance : coupe les animations et/ou les effets visuels.
-- Pixels scintillants sur le fond du lanceur, signature discrète, contour doux autour d'un jeu cliqué.
-- Le zoom agrandit aussi la rangée « Reprendre ».
+## 2.2.0 — Maintenance and updates
+- Settings > Maintenance > "Check the library": finds games whose file has disappeared and duplicate games, with one-click clean-up and merge (play time and launches are added up).
+- "Uninstall Arcade" from Settings, with or without keeping your library.
 
-## 1.14 — Import, reprise et statistiques en direct
-- Import automatique des jeux Steam, Epic et GOG.
-- Rangée « Reprendre », bouton « Surprends-moi », temps de jeu et statistiques en direct.
-- Zoom des cases par crans précis, nouveau logo pixel (couleur modifiable), animation sur tous les boutons.
+## 2.1.0 — Automatic updates
+- Arcade checks for a new version and offers to install it in one click: it downloads, updates itself and restarts (can be turned off; a "Check" button is in Settings).
+- Run as administrator: launch arguments and the working folder are now passed to the game.
+- Launch arguments are also used for `.bat` and `.cmd` files.
+
+## 2.0.0 — Arcade becomes a real application
+- Rewritten in Rust (Tauri): Arcade has its own window, with no Edge and no PowerShell server.
+- `ArcadeSetup.exe`: choose the install folder; data is stored in the `data` subfolder.
+- Auto-hiding menu: collapsed when idle, it pushes the content to the right on hover (optional).
+- Drag and drop of shortcuts (`.lnk`, `.url`) and `.exe` files.
+- Live play time, break reminders, Steam / Epic / GOG import.
+- Arcade minimizes when a game starts (optional).
+- Start with Windows and notification area.
+- Language choice: French or English.
+
+## 1.19.0 — Arcade achievements
+- "Achievements" button: 18 badges to unlock (games added, total hours, days in a row, favorites, finished games…).
+- A notification for every unlocked achievement; progress is saved in the settings.
+
+## 1.18.0 — What's new
+- "What's new" button: change history for each version, with an alert dot on every new version.
+
+## 1.17.0 — Reset and installer
+- Settings > Reset: brings Arcade back to new (library, categories, statistics, covers, settings).
+- `Arcade.exe`: installer with folder choice, Desktop / Start menu shortcuts, update and uninstall.
+
+## 1.16.0 — New game page
+- Colored background, large glowing cover, better-arranged buttons, statistics with icons and a play time bar.
+- "Finished" button and a button to copy the game's path.
+
+## 1.15.x — Performance and polish
+- Settings > Performance: turn off animations and/or visual effects.
+- Twinkling pixels on the launcher background, discreet signature, soft outline around a clicked game.
+- The zoom also enlarges the "Resume" row.
+
+## 1.14 — Import, resume and live statistics
+- Automatic import of Steam, Epic and GOG games.
+- "Resume" row, "Surprise me" button, live play time and statistics.
+- Card zoom in precise steps, new pixel logo (color can be changed), animation on every button.

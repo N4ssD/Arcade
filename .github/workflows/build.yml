@@ -1,4 +1,4 @@
-name: Compiler Arcade
+name: Build Arcade
 permissions:
   contents: write
 on:
@@ -14,20 +14,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - name: Compilation
+      - name: Compile
         run: cargo build --release --manifest-path src-tauri/Cargo.toml
-      - name: Nommer le fichier ArcadeSetup.exe
+      - name: Name the file ArcadeSetup.exe
         shell: bash
         run: cp src-tauri/target/release/arcade.exe ArcadeSetup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: ArcadeSetup
           path: ArcadeSetup.exe
-      - name: Publier la dernière version
+      - name: Publish the latest build
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete rust-latest --yes --cleanup-tag || true
           gh release delete dernier --yes --cleanup-tag || true
-          gh release create dernier ArcadeSetup.exe --prerelease --title "Arcade (dernière version)" --notes "Télécharge ArcadeSetup.exe, lance-le et choisis où l'installer."
+          gh release create dernier ArcadeSetup.exe --prerelease --title "Arcade (latest build)" --notes "Download ArcadeSetup.exe, run it and choose where to install. Windows 10 or 11, 64-bit. See the README for details."
