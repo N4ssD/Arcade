@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.2 — Avatar strip
+- The avatar moves into a slim strip under the search bar (character, speech bubble, coins, level, Customize button), so the library keeps its full width.
+- The cross hides the strip; the "My avatar" menu entry brings it back.
+
 ## 2.4.1 — Avatar in the menu
 - The avatar icon in the menu is now a small face in a frame, aligned exactly with the other icons.
 

@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.4.1';
+  const APP_VERSION = '2.4.2';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1123,7 +1123,7 @@
     if (!navBtn || !panel) return;
     navBtn.hidden = !on;
     const lib = !(state.view === 'settings' || state.view === 'stats');
-    const open = on && lib && state.settings.avatarPanel !== false && innerWidth >= 1100;
+    const open = on && lib && state.settings.avatarPanel !== false;
     document.body.classList.toggle('av-open', open);
     panel.hidden = !open;
     if (!on) return;
@@ -1135,14 +1135,14 @@
     const bg = AV.BGS[a.bg] || AV.BGS.b0;
     panel.style.setProperty('--bg1', bg[0]); panel.style.setProperty('--bg2', bg[1]);
     panel.replaceChildren(
-      h('div', { class: 'av-head' }, h('b', { text: 'Mon avatar' }),
-        h('button', { class: 'av-x', title: 'Masquer le panneau', 'aria-label': 'Masquer le panneau', 'data-snd': 'none', text: '›', onClick: () => { setSetting({ avatarPanel: false }); renderAvatar(); } })),
-      h('div', { class: 'av-stage' },
-        h('div', { class: 'av-bubble', text: msg }),
-        h('button', { class: 'av-char', title: 'Clique pour me parler', 'data-snd': 'none', onClick: (e) => { avMsgIdx++; renderAvatar(); const c = $('#av-panel .av-char'); if (c) c.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-8px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); } }, svgNode(AV.svg(a, 'full', 150)))),
-      h('div', { class: 'av-lvl' }, h('span', { text: 'Niv. ' + pr.level }), h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(3, Math.round(pr.pct * 100)) + '%' } }))),
-      h('div', { class: 'av-foot' }, h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), String(avCoins(a))),
-        h('button', { class: 'btn primary', text: 'Personnaliser', onClick: openAvatarEditor })));
+      h('button', { class: 'av-who', title: 'Clique pour me parler', 'data-snd': 'none', onClick: () => { avMsgIdx++; renderAvatar(); const c = $('#av-panel .av-who span'); if (c) c.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-7px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); } },
+        h('span', {}, svgNode(AV.svg(a, 'full', 40)))),
+      h('div', { class: 'av-bubble', text: msg }),
+      h('span', { class: 'av-sp' }),
+      h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), String(avCoins(a))),
+      h('div', { class: 'av-lvl' }, h('div', {}, h('span', { text: 'Niv. ' + pr.level }), h('em', { text: Math.round(pr.pct * 100) + ' %' })), h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(3, Math.round(pr.pct * 100)) + '%' } }))),
+      h('button', { class: 'btn primary', text: 'Personnaliser', onClick: openAvatarEditor }),
+      h('button', { class: 'av-x', title: 'Masquer la bande', 'aria-label': 'Masquer la bande', 'data-snd': 'none', text: '✕', onClick: () => { setSetting({ avatarPanel: false }); renderAvatar(); } }));
   }
   function toggleAvatarPanel() {
     if (state.view === 'settings' || state.view === 'stats') { setView('all'); setSetting({ avatarPanel: true }); renderAvatar(); return; }
@@ -1217,6 +1217,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.4.2', title: 'Avatar en bande', items: ['L\'avatar passe dans une bande fine sous la barre de recherche (personnage, phrase, pièces, niveau, bouton Personnaliser) : la bibliothèque garde toute sa largeur.', 'La croix masque la bande ; l\'entrée « Mon avatar » du menu la rouvre.'] },
     { v: '2.4.1', title: 'Avatar dans le menu', items: ['L\'icône de l\'avatar dans le menu est maintenant un petit visage dans un cadre, exactement aligné sur les autres icônes.'] },
     { v: '2.4.0', title: 'Ton avatar', items: ['Nouveau : un personnage en pixels qui te représente, avec un niveau (selon ton temps de jeu et tes succès) et des pièces à dépenser.', 'Panneau à droite de la bibliothèque : l\'avatar te parle de tes jeux (ça fait X jours que tu n\'as pas relancé…). Clique dessus pour changer de phrase, sur la flèche pour masquer le panneau.', 'Éditeur « Personnaliser » : peau, cheveux, visage, haut, bas, chaussures, accessoires et fond, avec des couleurs et des objets à acheter ou à débloquer avec des succès.', 'Tu n\'aimes pas ? Paramètres > Apparence > Avatar le désactive complètement.'] },
     { v: '2.3.7', title: 'Menu replié', items: ['Le séparateur en points sous les paramètres est retiré (celui entre Statistiques et les catégories reste).'] },

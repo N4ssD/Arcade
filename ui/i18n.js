@@ -239,7 +239,7 @@
     'Dossier d\'installation invalide.': 'Invalid installation folder.', 'Choisis un dossier, pas la racine d\'un disque.': 'Choose a folder, not the root of a drive.', 'Choisis un dossier en dehors de Windows.': 'Choose a folder outside Windows.',
     'L\'installeur ne répond plus.': 'The installer is not responding.', 'Erreur inconnue.': 'Unknown error.',
     // --- avatar ---
-    'Mon avatar': 'My avatar', 'Personnaliser': 'Customize', 'Masquer le panneau': 'Hide panel', 'Clique pour me parler': 'Click to talk to me',
+    'Mon avatar': 'My avatar', 'Personnaliser': 'Customize', 'Masquer le panneau': 'Hide panel', 'Masquer la bande': 'Hide the strip', 'Clique pour me parler': 'Click to talk to me',
     'Avatar': 'Avatar', 'Aléatoire': 'Random', 'Réinitialiser': 'Reset', 'Annuler': 'Cancel', 'Enregistrer': 'Save', 'Avatar enregistré.': 'Avatar saved.',
     'Peau': 'Skin', 'Cheveux': 'Hair', 'Visage': 'Face', 'Haut': 'Top', 'Bas': 'Bottom', 'Chaussures': 'Shoes', 'Accessoires': 'Accessories', 'Fond': 'Background', 'Couleur': 'Color',
     'Court': 'Short', 'Long': 'Long', 'Frange': 'Fringe', 'Pointes': 'Spikes', 'Sourire': 'Smile', 'Heureux': 'Happy', 'Sérieux': 'Serious', 'Surpris': 'Surprised',
