@@ -57,6 +57,14 @@ fn new_id() -> String {
     )
 }
 
+fn log(dir: &Path, msg: &str) {
+    use std::io::Write;
+    let _ = fs::create_dir_all(dir);
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(dir.join("arcade.log")) {
+        let _ = writeln!(f, "[{}] {}", now_ms() / 1000, msg);
+    }
+}
+
 fn limit(s: &str, max: usize) -> String {
     s.chars().take(max).collect()
 }
@@ -621,8 +629,11 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
             save(dir, db);
             Ok(json!({ "ok": true, "settings": db.settings }))
         }
+        // Couvertures et icônes : pas encore portées, on répond sans erreur pour ne pas déranger
+        "fetchCover" => Ok(json!({ "ok": true, "found": false, "skipped": true })),
+        "refreshIcon" => Ok(json!({ "ok": true, "found": false })),
         // Fonctions pas encore portées dans la version Rust
-        "detectLaunchers" | "fetchCover" | "refreshIcon" | "addDropped" => {
+        "detectLaunchers" | "addDropped" => {
             Err("Pas encore disponible dans la version Rust (en cours de portage).".into())
         }
         _ => Err(format!("Fonction inconnue : {}", name)),
@@ -843,6 +854,11 @@ fn main() {
     let dir = data_dir();
     let _ = fs::create_dir_all(&dir);
     let db = load(&dir);
+    {
+        let d = dir.clone();
+        std::panic::set_hook(Box::new(move |info| log(&d, &format!("ERREUR (panic) : {}", info))));
+    }
+    log(&dir, &format!("Démarrage d'Arcade Rust {} ({} jeux)", VERSION, db.games.len()));
     tauri::Builder::default()
         .manage(App { db: Mutex::new(db), dir })
         .on_window_event(|window, event| {
@@ -850,6 +866,7 @@ fn main() {
                 let app = window.app_handle();
                 match d {
                     tauri::DragDropEvent::Enter { .. } => {
+                        log(&app.state::<App>().dir, "Fichier au-dessus de la fenêtre");
                         let _ = app.emit("arcade-drag", json!({ "over": true }));
                     }
                     tauri::DragDropEvent::Leave => {
@@ -858,11 +875,13 @@ fn main() {
                     tauri::DragDropEvent::Drop { paths, .. } => {
                         let _ = app.emit("arcade-drag", json!({ "over": false }));
                         let st = app.state::<App>();
+                        log(&st.dir, &format!("Dépôt de {} fichier(s) : {:?}", paths.len(), paths));
                         let res = match st.db.lock() {
                             Ok(mut db) => Some(add_dropped(&st.dir, &mut db, paths)),
                             Err(_) => None,
                         };
                         if let Some((added, skipped)) = res {
+                            log(&st.dir, &format!("Dépôt : {} ajouté(s), {} ignoré(s)", added, skipped));
                             let _ = app.emit("arcade-dropped", json!({ "added": added, "skipped": skipped }));
                         }
                     }
@@ -872,5 +891,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![api])
         .run(tauri::generate_context!())
-        .expect("Erreur au lancement d'Arcade");
+        .unwrap_or_else(|e| {
+            log(&data_dir(), &format!("ERREUR au lancement : {}", e));
+        });
 }
