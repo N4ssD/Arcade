@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.11.0 — Pixel cursor
+- New pixel cursor (arrow + hand over buttons and games) in your accent color, inside the Arcade window only.
+- Settings > Appearance > "Pixel cursor" turns it off.
+
 ## 2.10.1 — Faster music start
 - The ambient music starts as soon as loading ends, without waiting for a click, and fades in faster.
 

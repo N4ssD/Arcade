@@ -174,6 +174,7 @@ function renderSettings() {
     ),
     h('div', { class: 'set-group' },
       h('h2', { text: 'Apparence' }),
+      switchRow('Curseur en pixels', 'Remplace la flèche de la souris par un curseur pixel à ta couleur d\'accent, dans la fenêtre d\'Arcade seulement.', 'cursor', () => applyCursor()),
       langRow(),
       themeRow(),
       autoMenuRow(),

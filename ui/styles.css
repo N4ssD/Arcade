@@ -1058,3 +1058,9 @@ body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: tra
 .ach-claim .btn, .ach-take { height: 30px; min-height: 0; padding: 4px 12px; font-size: 12px; }
 .ach-done { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ach-got { font-family: var(--font-px); font-size: 12px; color: var(--muted, #9A9AAE); }
+
+/* Curseur en pixels (réglage « Curseur en pixels ») */
+body.pxcur, body.pxcur * { cursor: var(--cur-arrow) 0 0, default !important; }
+body.pxcur button:not(:disabled), body.pxcur a, body.pxcur summary, body.pxcur label, body.pxcur select, body.pxcur [role="button"], body.pxcur [data-snd]:not([data-snd="none"]),
+body.pxcur .card, body.pxcur .card *, body.pxcur .nav-item, body.pxcur .nav-item *, body.pxcur .switch, body.pxcur .switch *, body.pxcur input[type="checkbox"], body.pxcur input[type="range"], body.pxcur .ach-tab, body.pxcur .av-who, body.pxcur .av-who * { cursor: var(--cur-hand) 4 0, pointer !important; }
+body.pxcur input[type="text"], body.pxcur input[type="search"], body.pxcur input:not([type]), body.pxcur textarea { cursor: text !important; }

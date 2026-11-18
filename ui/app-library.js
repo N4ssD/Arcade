@@ -324,9 +324,29 @@ function logoCols(hex) {
   const [h0, s0] = hexToHsl(hex), s = Math.max(40, Math.min(90, s0));
   return [hslToHex(h0, s, 82), hslToHex(h0, Math.max(35, s - 12), 58)];
 }
+
+// Curseur en pixels (flèche + main) à la couleur du logo / de l'accent
+const CUR_ARROW = ['X...........', 'XX..........', 'XOX.........', 'XOOX........', 'XOOOX.......', 'XOOOOX......', 'XOOOOOX.....', 'XOOOOOOX....', 'XOOOOOOOX...', 'XOOOOOOOOX..', 'XOOOOOXXXXX.', 'XOOXOOX.....', 'XOX.XOOX....', 'XX..XOOX....', 'X....XOOX...', '.....XOOX...', '......XX....'];
+const CUR_HAND = ['....XX........', '...XOOX.......', '...XOOX.......', '...XOOX.......', '...XOOXXX.....', '...XOOXOOXX...', 'XX.XOOXOOXOOX.', 'XOXXOOOOOOOOOX', 'XOOXOOOOOOOOOX', '.XOOOOOOOOOOOX', '.XOOOOOOOOOOOX', '..XOOOOOOOOOX.', '..XOOOOOOOOOX.', '...XOOOOOOOX..', '...XOOOOOOOX..', '...XXXXXXXXX..'];
+let curColor = '#9c7cf0';
+function curUrl(bm, fill) {
+  const px = 2, w = bm[0].length * px, h = bm.length * px;
+  let r = '';
+  bm.forEach((row, y) => [...row].forEach((c, x) => { if (c !== '.') r += `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${c === 'X' ? '#121218' : fill}"/>`; }));
+  return 'url("data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" shape-rendering="crispEdges">${r}</svg>`) + '")';
+}
+function applyCursor(color) {
+  if (color && /^#[0-9a-f]{6}$/i.test(color)) curColor = color;
+  const on = state.settings.cursor !== false, root = document.documentElement;
+  document.body.classList.toggle('pxcur', on);
+  if (!on) return;
+  root.style.setProperty('--cur-arrow', curUrl(CUR_ARROW, curColor));
+  root.style.setProperty('--cur-hand', curUrl(CUR_HAND, curColor));
+}
 let lastLogoKey = '';
 function applyLogo(acc) {
   const own = /^#[0-9a-f]{6}$/i.test(state.settings.logo || '') ? state.settings.logo.toLowerCase() : acc;
+  applyCursor(own);
   const [a, b] = logoCols(own), root = document.documentElement;
   root.style.setProperty('--logo-a', a); root.style.setProperty('--logo-b', b);
   // icône de la fenêtre / barre des tâches : PNG nets dessinés à la couleur du logo.
