@@ -96,7 +96,7 @@
     if (a.acc === 'glasses') { R(4, 6, 4, 3, NS); R(8, 6, 4, 3, NS); R(5, 7, 2, 1, '#8fd0ff'); R(9, 7, 2, 1, '#8fd0ff'); }
     if (a.acc === 'cap') { R(3, 1, 10, 3, '#E8663D'); R(3, 4, 10, 1, '#b8472a'); R(11, 3, 4, 1, '#b8472a'); R(6, 2, 3, 1, '#fff'); }
     if (a.acc === 'crown') { R(4, -1, 8, 2, '#ffd166'); R(4, -2, 1, 1, '#ffd166'); R(7, -3, 2, 2, '#ffd166'); R(11, -2, 1, 1, '#ffd166'); }
-    const VB = { full: [0, -3, 16, 28], head: [2, -3, 12, 14], top: [1, 9, 14, 11], bottom: [3, 17, 10, 8], shoes: [3, 20, 10, 5] }[view || 'full'] || [0, -3, 16, 28];
+    const VB = { full: [0, -3, 16, 28], head: [2, -3, 12, 14], face: [3, 0, 10, 10], top: [1, 9, 14, 11], bottom: [3, 17, 10, 8], shoes: [3, 20, 10, 5] }[view || 'full'] || [0, -3, 16, 28];
     const w = size || 100, hgt = Math.round(w * VB[3] / VB[2]);
     return '<svg width="' + w + '" height="' + hgt + '" style="width:' + w + 'px;height:' + hgt + 'px;stroke:none" viewBox="' + VB.join(' ') + '" shape-rendering="crispEdges" aria-hidden="true">' + g.join('') + '</svg>';
   }

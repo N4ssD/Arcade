@@ -930,7 +930,7 @@ body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 9px; }
 body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: transparent; }
 
 /* ---------- Avatar (2.4.0) ---------- */
-.nav-item.av-nav .av-ic { flex: none; width: 24px; height: 24px; display: grid; place-items: center; overflow: visible; font-style: normal; }
+.nav-item.av-nav .av-ic { flex: none; width: 24px; height: 24px; margin: -3px; box-sizing: border-box; display: grid; place-items: center; overflow: hidden; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); background: radial-gradient(circle at 50% 35%, #3b2f66, #1c1830); font-style: normal; }
 .nav-item.av-nav[hidden] { display: none; }
 .av-panel { position: absolute; z-index: 4; right: 16px; top: 14px; bottom: 16px; width: 284px; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 50px -24px rgba(0,0,0,.6); }
 .av-panel[hidden] { display: none; }

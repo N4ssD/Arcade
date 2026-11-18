@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.4.0';
+  const APP_VERSION = '2.4.1';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1128,7 +1128,7 @@
     panel.hidden = !open;
     if (!on) return;
     const a = avData(), pr = avStats();
-    navBtn.querySelector('.av-ic').replaceChildren(svgNode(AV.svg(a, 'head', 22)));
+    navBtn.querySelector('.av-ic').replaceChildren(svgNode(AV.svg(a, 'face', 20)));
     $('#av-lv').textContent = 'Niv. ' + pr.level;
     if (!open) return;
     const msgs = avatarSays(), msg = msgs[avMsgIdx % msgs.length];
@@ -1217,6 +1217,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.4.1', title: 'Avatar dans le menu', items: ['L\'icône de l\'avatar dans le menu est maintenant un petit visage dans un cadre, exactement aligné sur les autres icônes.'] },
     { v: '2.4.0', title: 'Ton avatar', items: ['Nouveau : un personnage en pixels qui te représente, avec un niveau (selon ton temps de jeu et tes succès) et des pièces à dépenser.', 'Panneau à droite de la bibliothèque : l\'avatar te parle de tes jeux (ça fait X jours que tu n\'as pas relancé…). Clique dessus pour changer de phrase, sur la flèche pour masquer le panneau.', 'Éditeur « Personnaliser » : peau, cheveux, visage, haut, bas, chaussures, accessoires et fond, avec des couleurs et des objets à acheter ou à débloquer avec des succès.', 'Tu n\'aimes pas ? Paramètres > Apparence > Avatar le désactive complètement.'] },
     { v: '2.3.7', title: 'Menu replié', items: ['Le séparateur en points sous les paramètres est retiré (celui entre Statistiques et les catégories reste).'] },
     { v: '2.3.6', title: 'Séparateurs en points', items: ['Menu replié : les lignes sont remplacées par trois petits points discrets, centrés entre les groupes d\'icônes.', 'Mise à jour : Arcade compare maintenant avec la version réellement publiée, il ne te propose plus une mise à jour qui n\'est pas encore compilée.'] },

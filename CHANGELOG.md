@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.4.1 — Avatar in the menu
+- The avatar icon in the menu is now a small face in a frame, aligned exactly with the other icons.
+
 ## 2.4.0 — Your avatar
 - New: a pixel-art character that represents you, with a level (from play time and achievements) and coins to spend.
 - A panel beside the library: the avatar talks about your games ("it's been 3 days since you played…"). Click it for another line, click the arrow to hide the panel.
