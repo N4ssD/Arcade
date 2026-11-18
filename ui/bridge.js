@@ -63,6 +63,7 @@
     refreshIcon: (id) => call('refreshIcon', { id }),
     fetchCover: (id, opts = {}) => call('fetchCover', { id, ...opts }),
     detectLaunchers: () => call('detectLaunchers'),
+    perf: () => call('perf'),
     checkLibrary: () => call('checkLibrary'),
     mergeGames: (keep, remove) => call('mergeGames', { keep, remove }),
     uninstall: (wipe) => call('uninstall', { wipe: !!wipe }),
@@ -87,5 +88,5 @@
   // Fenêtre réduite : on vérifie beaucoup moins souvent pour ne rien consommer
   const loop = () => { beat(); setTimeout(loop, document.hidden ? 15000 : 1500); };
   loop();
-  document.addEventListener('visibilitychange', () => document.body.classList.toggle('idle', document.hidden));
+  document.addEventListener('visibilitychange', () => { document.body.classList.toggle('idle', document.hidden); if (!document.hidden) beat(); });
 })();

@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.2.0';
+  const APP_VERSION = '2.3.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -126,6 +126,53 @@
     document.body.append(bar);
   }
 
+  // ---------- Performances ----------
+  // Pause des animations quand la fenêtre est cachée, ou (mode économie) pendant qu'un jeu tourne
+  function applyIdle() {
+    const eco = state.settings.ecoMode !== false && state.running && state.running.size > 0;
+    document.body.classList.toggle('idle', document.hidden || !!eco);
+  }
+  document.addEventListener('visibilitychange', applyIdle);
+  const fmtMb = (n) => (n >= 1024 ? (n / 1024).toFixed(1).replace('.', ARC.decimal || '.') + ' Go' : Math.round(n) + ' Mo');
+  let perfTimer = null;
+  async function pollPerf() {
+    clearTimeout(perfTimer);
+    const chip = $('#perf-chip'), live = document.getElementById('perf-mem');
+    const wantChip = state.settings.perfChip === true;
+    if (chip) chip.hidden = !wantChip;
+    if ((wantChip || live) && !document.hidden) {
+      try {
+        const r = await api.perf();
+        if (wantChip) $('#perf-chip-t').textContent = 'Arcade · ' + fmtMb(r.memMb) + ' · ' + String(r.cpu).replace('.', ARC.decimal || '.') + ' % CPU';
+        if (live) {
+          live.textContent = fmtMb(r.memMb);
+          document.getElementById('perf-mem-bar').style.width = Math.min(100, r.memMb / 5) + '%';
+          document.getElementById('perf-cpu').textContent = String(r.cpu).replace('.', ARC.decimal || '.') + ' %';
+          document.getElementById('perf-cpu-bar').style.width = Math.min(100, r.cpu * 4) + '%';
+          document.getElementById('perf-open').textContent = r.openMs ? (r.openMs / 1000).toFixed(1).replace('.', ARC.decimal || '.') + ' s' : '—';
+          document.getElementById('perf-open-bar').style.width = Math.min(100, (r.openMs / 100) || 0) + '%';
+          const pill = document.getElementById('perf-state');
+          const sleeping = state.running.size > 0;
+          pill.className = 'pill' + (sleeping ? ' sleep' : '');
+          pill.lastChild.textContent = sleeping ? 'Veille pendant le jeu' : 'Actif';
+        }
+      } catch (_) {}
+    }
+    perfTimer = setTimeout(pollPerf, live ? 2000 : 5000);
+  }
+  function perfPanel() {
+    setTimeout(pollPerf, 150);
+    const tile = (l, id, bar) => h('div', { class: 'tile' }, h('div', { class: 'l', text: l }), h('div', { class: 'n', id, text: '…' }), h('div', { class: 'bar' }, h('b', { id: bar })));
+    return h('div', { class: 'set-group' },
+      h('h2', { text: 'Performances' }),
+      h('div', { class: 'perf-tiles' }, tile('Mémoire', 'perf-mem', 'perf-mem-bar'), tile('Processeur', 'perf-cpu', 'perf-cpu-bar'), tile('Ouverture', 'perf-open', 'perf-open-bar')),
+      h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'État d\'Arcade' }), h('small', { text: 'La mémoire comprend le moteur d\'affichage d\'Arcade. Pendant un jeu, Arcade se réduit et met ses animations en pause.' })),
+        h('span', { class: 'pill', id: 'perf-state' }, h('span', { class: 'dot' }), h('span', { text: 'Actif' }))),
+      switchRow('Mode économie automatique', 'Coupe les animations quand la fenêtre est cachée ou qu\'un jeu tourne.', 'ecoMode', () => applyIdle()),
+      switchRow('Indicateur dans le menu', 'Affiche discrètement la mémoire et le processeur utilisés par Arcade en bas du menu.', 'perfChip', () => pollPerf())
+    );
+  }
+
   // ---------- Mises à jour ----------
   let updating = false;
   function showUpdate(latest) {
@@ -176,6 +223,7 @@
     state.daily = lib.daily || {};
     state.running = new Set(lib.running);
     state.installed = !!lib.installed;
+    setTimeout(applyIdle, 0);
     state.settings = { ...state.settings, ...lib.settings };
     checkVersion(lib.version);
     applyCardSize(state.settings.cardSize);
@@ -1045,6 +1093,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.3.0', title: 'Performances', items: ['Nouveau panneau « Performances » dans les réglages : mémoire (moteur d\'affichage compris), processeur et temps d\'ouverture, mesurés en direct.', 'Mode économie : les animations se mettent en pause quand la fenêtre est cachée ou pendant un jeu. Indicateur optionnel en bas du menu.', 'Arcade se rouvre beaucoup plus vite quand tu quittes un jeu.', 'Installation plus rapide : copie des fichiers en parallèle et moins d\'attente.'] },
     { v: '2.2.0', title: 'Entretien et mises à jour', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.', 'Nouveau dans les réglages : « Vérifier la bibliothèque » (jeux introuvables et doublons, avec fusion) et « Désinstaller Arcade » (avec ou sans ta bibliothèque).'] },
     { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu, et se rouvre tout seul quand le jeu se ferme.', 'Un clic sur le logo change le mode du menu : automatique, déplié en permanence ou fermé en permanence.', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
@@ -1864,6 +1913,7 @@
         switchRow('Couvertures automatiques', 'À l\'ajout d\'un jeu, télécharge une couverture HD depuis Steam. Seul le nom du jeu est envoyé.', 'autoCovers'),
         h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Couvertures manquantes' }), h('small', { text: 'Relance la recherche pour les jeux sans image.' })), missing)
       ),
+      perfPanel(),
       h('div', { class: 'set-group' },
         h('h2', { text: 'Entretien' }),
         h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Vérifier la bibliothèque' }), h('small', { text: 'Repère les jeux dont le fichier a disparu et les jeux ajoutés en double, et te propose de les nettoyer.' })),
@@ -2077,5 +2127,6 @@
     setTimeout(() => Sound.play('start'), 150);
     setTimeout(endSplash, Math.max(0, 2100 - (performance.now() - bootStart)));
     if (state.settings.checkUpdates !== false) setTimeout(() => checkUpdate(false), 5000);
+    setTimeout(pollPerf, 1500);
   }).catch(() => endSplash());
 })();

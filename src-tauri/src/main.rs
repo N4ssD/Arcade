@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.2.0";
+const VERSION: &str = "2.3.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -202,7 +202,7 @@ fn default_settings() -> Obj {
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
-        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true
+        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -267,7 +267,7 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
             }
         }
         "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
-        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" => {
+        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));
             }
@@ -1669,28 +1669,30 @@ mod inst {
     }
 
     pub fn install(dir: &Path, desktop: bool, start: bool) -> Result<(), String> {
+        let t0 = std::time::Instant::now();
+        let mut marks: Vec<String> = vec![];
+        let mut mark = |what: &str| marks.push(format!("{} {} ms", what, t0.elapsed().as_millis()));
         valid_dir(dir)?;
         let target = dir.join("Arcade.exe");
         kill_others(&target);
+        mark("arrêt");
         fs::create_dir_all(dir).map_err(|e| format!("Impossible de créer le dossier : {}", e))?;
         let me = std::env::current_exe().map_err(|e| e.to_string())?;
-        // le fichier cible peut mettre un instant à se libérer après l'arrêt d'Arcade
-        let mut last = String::new();
-        for _ in 0..10 {
-            match fs::copy(&me, &target) {
-                Ok(_) => {
-                    last.clear();
-                    break;
-                }
-                Err(e) => {
-                    last = e.to_string();
-                    std::thread::sleep(std::time::Duration::from_millis(400));
+        // la copie de l'application (le plus long : l'antivirus analyse le fichier) se fait en parallèle du reste
+        let (src, dst) = (me.clone(), target.clone());
+        let copier = std::thread::spawn(move || -> String {
+            let mut last = String::new();
+            for _ in 0..12 {
+                match fs::copy(&src, &dst) {
+                    Ok(_) => return String::new(),
+                    Err(e) => {
+                        last = e.to_string();
+                        std::thread::sleep(std::time::Duration::from_millis(250));
+                    }
                 }
             }
-        }
-        if !last.is_empty() {
-            return Err(format!("Copie de l'application impossible : {}", last));
-        }
+            last
+        });
         // données : reprises de l'ancien dossier d'installation, sinon de l'ancienne version (%APPDATA%)
         let ndata = dir.join("data");
         if !ndata.join("library.json").exists() {
@@ -1708,8 +1710,17 @@ mod inst {
             dir.join("LISEZMOI.txt"),
             "Arcade - dossier d'installation\r\n\r\nArcade.exe : l'application\r\ndata\\library.json : ta bibliotheque et tes reglages\r\ndata\\covers : les pochettes\r\ndata\\icons : les icones\r\ndata\\arcade.log : le journal (utile en cas de probleme)\r\n",
         );
+        mark("données");
         make_shortcuts(dir, desktop, start);
+        mark("raccourcis");
+        let copied = copier.join().unwrap_or_else(|_| "copie interrompue".into());
+        mark("copie de l'application");
+        if !copied.is_empty() {
+            return Err(format!("Copie de l'application impossible : {}", copied));
+        }
         reg_write(dir, &target);
+        mark("registre");
+        log(&ndata, &format!("Durées d'installation : {}", marks.join(" · ")));
         Ok(())
     }
 
@@ -2000,7 +2011,7 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
             if now < r.next_check {
                 continue;
             }
-            r.next_check = now + 4000;
+            r.next_check = now + 1500;
             let mut prefix = dir.to_string_lossy().to_lowercase();
             if !prefix.ends_with('\\') {
                 prefix.push('\\');
@@ -2017,7 +2028,7 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
             } else if !r.seen {
                 alive = now - r.start < 240_000;
             } else {
-                alive = now - r.last_seen < 12_000;
+                alive = now - r.last_seen < 5_000;
                 end_at = r.last_seen;
             }
         } else if let Some(c) = r.child.as_mut() {
@@ -2095,6 +2106,45 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
             show_main(app);
         }
     }
+}
+
+// ---------- performances ----------
+
+static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+static OPEN_MS: AtomicU64 = AtomicU64::new(0);
+static PERF_SYS: Mutex<Option<sysinfo::System>> = Mutex::new(None);
+
+// Mémoire et processeur d'Arcade, moteur d'affichage (WebView2) compris : on additionne l'arbre de processus
+fn perf_snapshot(game_running: bool) -> Value {
+    use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate};
+    let me = Pid::from_u32(std::process::id());
+    let (mut mem, mut cpu, mut procs) = (0u64, 0f32, 0u32);
+    if let Ok(mut g) = PERF_SYS.lock() {
+        let sys = g.get_or_insert_with(sysinfo::System::new);
+        sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::new().with_cpu().with_memory());
+        let mut tree: Vec<Pid> = vec![me];
+        loop {
+            let before = tree.len();
+            for (pid, p) in sys.processes() {
+                if !tree.contains(pid) && p.parent().map(|pp| tree.contains(&pp)).unwrap_or(false) {
+                    tree.push(*pid);
+                }
+            }
+            if tree.len() == before {
+                break;
+            }
+        }
+        for pid in &tree {
+            if let Some(p) = sys.process(*pid) {
+                mem += p.memory();
+                cpu += p.cpu_usage();
+                procs += 1;
+            }
+        }
+    }
+    let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1) as f32;
+    let up = START.get().map(|s| s.elapsed().as_secs()).unwrap_or(0);
+    json!({ "ok": true, "memMb": (mem as f64 / 1_048_576.0).round(), "cpu": ((cpu / cores) as f64 * 10.0).round() / 10.0, "procs": procs, "openMs": OPEN_MS.load(Ordering::Relaxed), "uptime": up, "gameRunning": game_running })
 }
 
 // ---------- mises à jour ----------
@@ -2184,7 +2234,10 @@ fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
         let _ = w.unminimize();
+        // Windows refuse parfois de mettre au premier plan une fenêtre qui n'a pas le focus : on la fait passer devant un instant
+        let _ = w.set_always_on_top(true);
         let _ = w.set_focus();
+        let _ = w.set_always_on_top(false);
     }
 }
 
@@ -2240,6 +2293,10 @@ fn tray_mode(app: &tauri::AppHandle) -> bool {
 
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
+    if name == "perf" {
+        let running = state.running.lock().map(|r| !r.is_empty()).unwrap_or(false);
+        return tauri::async_runtime::spawn_blocking(move || Ok(perf_snapshot(running))).await.map_err(|e| e.to_string())?;
+    }
     if name == "checkUpdate" {
         return check_update_cmd().await;
     }
@@ -2302,6 +2359,9 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
     drop(db);
     let mut res = res;
     if name == "library" {
+        if OPEN_MS.load(Ordering::Relaxed) == 0 {
+            OPEN_MS.store(START.get().map(|s| s.elapsed().as_millis() as u64).unwrap_or(0).max(1), Ordering::Relaxed);
+        }
         if let (Ok(v), Ok(runs)) = (&mut res, state.running.lock()) {
             let ids: Vec<Value> = runs.iter().filter(|(_, r)| r.watch.is_none() || r.seen).map(|(k, _)| json!(k)).collect();
             v["running"] = Value::Array(ids);
@@ -2322,6 +2382,7 @@ async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri
 }
 
 fn main() {
+    let _ = START.set(std::time::Instant::now());
     #[cfg(windows)]
     if std::env::args().any(|a| a == "--uninstall") {
         inst::uninstall();
@@ -2412,7 +2473,7 @@ fn main() {
                 std::thread::spawn(move || {
                     let mut sys = sysinfo::System::new();
                     loop {
-                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        std::thread::sleep(std::time::Duration::from_millis(1000));
                         tick(&h, &mut sys);
                     }
                 });

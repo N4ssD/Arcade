@@ -899,3 +899,18 @@ body.automenu.menu-open .sidebar { box-shadow: none; }
 .chk-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border, #3A3A48); }
 .chk-item small { word-break: break-all; }
 .chk-group { margin-bottom: 12px; }
+
+.perf-tiles { display: flex; gap: 14px; margin-bottom: 8px; }
+.perf-tiles .tile { flex: 1; background: rgba(255,255,255,.03); border: 1px solid var(--border, #3A3A48); border-radius: 14px; padding: 14px; }
+.perf-tiles .l { font-family: var(--font-display, 'Silkscreen'); font-size: 12px; color: var(--muted, #9A9AAE); text-transform: uppercase; }
+.perf-tiles .n { font-family: var(--font-display, 'Silkscreen'); font-size: 22px; margin-top: 6px; }
+.perf-tiles .bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,.08); margin-top: 10px; overflow: hidden; }
+.perf-tiles .bar b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #bba3ff, var(--accent)); transition: width .6s ease; }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display, 'Silkscreen'); font-size: 12px; padding: 7px 12px; border-radius: 999px; background: rgba(93,211,158,.12); border: 1px solid rgba(93,211,158,.5); color: #5DD39E; text-transform: uppercase; white-space: nowrap; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #5DD39E; }
+.pill.sleep { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--accent); }
+.pill.sleep .dot { background: var(--accent); }
+.perf-chip { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 8px 10px; border-radius: 10px; font-size: 12px; color: var(--muted, #9A9AAE); background: rgba(255,255,255,.04); border: 1px solid var(--border, #3A3A48); white-space: nowrap; overflow: hidden; }
+.perf-chip[hidden] { display: none; }
+.pc-dot { width: 8px; height: 8px; border-radius: 50%; background: #5DD39E; flex-shrink: 0; }
+body.collapsed .perf-chip span, body.automenu:not(.menu-open) .perf-chip span { display: none; }

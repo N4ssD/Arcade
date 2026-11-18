@@ -62,6 +62,18 @@
     'Désinstaller': 'Uninstall',
     'Supprime Arcade de ton ordinateur. Tu peux garder ta bibliothèque pour une future installation.': 'Removes Arcade from your computer. You can keep your library for a future install.',
     'Arcade n\'est pas installé : rien à désinstaller.': 'Arcade isn\'t installed: nothing to uninstall.',
+    'Performances': 'Performance',
+    'Mémoire': 'Memory',
+    'Processeur': 'Processor',
+    'Ouverture': 'Startup time',
+    'État d\'Arcade': 'Arcade status',
+    'La mémoire comprend le moteur d\'affichage d\'Arcade. Pendant un jeu, Arcade se réduit et met ses animations en pause.': 'Memory includes Arcade\'s display engine. During a game, Arcade minimizes and pauses its animations.',
+    'Actif': 'Active',
+    'Veille pendant le jeu': 'Sleeping during the game',
+    'Mode économie automatique': 'Automatic power saving',
+    'Coupe les animations quand la fenêtre est cachée ou qu\'un jeu tourne.': 'Stops animations when the window is hidden or a game is running.',
+    'Indicateur dans le menu': 'Indicator in the menu',
+    'Affiche discrètement la mémoire et le processeur utilisés par Arcade en bas du menu.': 'Discreetly shows the memory and processor used by Arcade at the bottom of the menu.',
     'Agrandir le menu': 'Expand the menu', 'Réduire le menu': 'Collapse the menu', 'Réduire le menu (Ctrl+B)': 'Collapse the menu (Ctrl+B)',
     'Ajouter un jeu (Ctrl+N)': 'Add a game (Ctrl+N)', 'Plein écran (F11)': 'Full screen (F11)', 'Rechercher… (Ctrl+F)': 'Search… (Ctrl+F)',
     'Taille des vignettes': 'Thumbnail size', 'Trier par': 'Sort by', 'Créer et gérer les catégories (Jeux, Logiciels…)': 'Create and manage categories (Games, Software…)',
@@ -232,6 +244,7 @@
   const pl = (n, one, many) => (Number(n) > 1 ? many : one);
   const UNITS = { 'jeu': 'game', 'jeux': 'games', 'jours': 'days', 'lancements': 'launches', 'favoris': 'favorites', 'terminé': 'finished', 'terminés': 'finished', 'catégories': 'categories', 'h': 'h' };
   const RULES = [
+    [/^Arcade · (.+) · (.+) % CPU$/, (m, a, b) => `Arcade · ${a} · ${b} % CPU`],
     [/^Jeux introuvables \((\d+)\)$/, (m, n) => `Missing games (${n})`],
     [/^Doublons \((\d+)\)$/, (m, n) => `Duplicates (${n})`],
     [/^Retirer ces (\d+) jeux?$/, (m, n) => `Remove these ${n} ${pl(n, 'game', 'games')}`],
