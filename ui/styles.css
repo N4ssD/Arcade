@@ -922,7 +922,7 @@ body.automenu.menu-open .sidebar { box-shadow: none; }
 body.collapsed:not(.menu-open) .perf-chip span { display: none; }
 body.collapsed:not(.menu-open) .perf-chip { justify-content: center; padding: 8px 0; }
 
-/* Menu replié : fines séparations entre les groupes */
-body.collapsed:not(.menu-open) .nav.cats:not(:empty) { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 8px; }
-body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -8px; height: 1px; background: var(--line); }
+/* Menu replié : fines séparations entre les groupes (ligne qui s'estompe aux extrémités, centrée, même espace dessus/dessous) */
+body.collapsed:not(.menu-open) .nav.cats:not(:empty)::before { content: ""; display: block; width: 34px; height: 1px; margin: 8px auto 8px; background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
+body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 9px; }
+body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 50%; bottom: -9px; width: 34px; height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
