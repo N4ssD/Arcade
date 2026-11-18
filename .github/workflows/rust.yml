@@ -1,4 +1,6 @@
 name: Arcade Rust (Tauri)
+permissions:
+  contents: write
 on:
   push:
     paths: ['rust/**', 'app/ui/**', '.github/workflows/rust.yml']
@@ -18,3 +20,11 @@ jobs:
         with:
           name: Arcade-rust-windows
           path: rust/target/release/arcade.exe
+      - name: Publier en pré-version (rust-latest)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp rust/target/release/arcade.exe Arcade-Rust.exe
+          gh release delete rust-latest --yes --cleanup-tag || true
+          gh release create rust-latest Arcade-Rust.exe --prerelease --title "Arcade Rust (test)" --notes "Version de test en Rust : bibliothèque, catégories, lancement, réglages. Le reste arrive."
