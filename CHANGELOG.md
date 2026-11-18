@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.1 — Consistent toolbar
+- Search, sort, Categories, Surprise me and Full screen now share the same height, rounding and background.
+- The sort list arrow no longer touches the border.
+
 ## 2.5.0 — Living avatar and 30 % volume
 - The avatar reacts: it falls asleep when you are idle, is happy when you launch a game (and when you come back), gets impatient if you linger in the menus.
 - Automatic outfits: pajamas at night, sunglasses in the afternoon, a beanie in winter, a witch costume at Halloween (can be turned off in Settings > Appearance).
