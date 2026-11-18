@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.2 — Polish
+- English text for the coin-collect banner, tidier layout of that banner.
+- New screenshots on the GitHub page.
+
 ## 2.7.1 — Collect your coins
 - Achievements: a "Collect" button on each unlocked achievement and "Collect all" at the top to cash in the coins.
 - The strip's Customize button is smaller.

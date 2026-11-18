@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.7.1';
+  const APP_VERSION = '2.7.2';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1432,6 +1432,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.7.2', title: 'Finitions', items: ['Le bandeau « pièces à récupérer » est mieux aligné et traduit en anglais.'] },
     { v: '2.7.1', title: 'Récupérer ses pièces', items: ['Succès : un bouton « Récupérer » sur chaque succès débloqué, et « Tout récupérer » en haut, pour encaisser les pièces.', 'Le bouton Personnaliser de la bande est plus discret.'] },
     { v: '2.7.0', title: '101 succès et des pièces à gagner', items: ['Plus de 80 nouveaux succès : temps de jeu, séries, jours joués, grosses sessions, jeux différents, lancements de nuit ou du matin, personnalisation, avatar, boutique, niveaux, pièces, et même des succès sur les succès.', 'Chaque succès rapporte des pièces selon son palier : 10 (bronze), 25 (argent), 50 (or) ou 100 (légende), à dépenser dans la boutique de l\'avatar.', 'Rien n\'est débloqué d\'avance : à ta première ouverture, Arcade note où tu en es, et seuls tes progrès à partir de là comptent (les 18 succès d\'origine gardent leur calcul habituel si tu les avais déjà).', 'Fenêtre Succès : filtres Tous / À débloquer / Débloqués, récompense de chaque succès et total de pièces gagnées.'] },
     { v: '2.6.0', title: 'Plus de looks, avatar plus fluide', items: ['5 nouvelles coiffures (queue de cheval, chignon, carré, crête, afro), 5 nouveaux hauts (débardeur, chemise, hawaï, salopette, armure) et une jupe.', 'Animations refaites : respiration douce, clignement des yeux, tête et bras qui bougent avec un léger décalage, saut avec écrasement quand il est content, tête qui penche quand il dort, pied qui tape quand il s\'impatiente.'] },

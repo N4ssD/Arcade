@@ -1053,7 +1053,7 @@ body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: tra
 .ach-grid { max-height: min(54vh, 460px); }
 
 .av-strip .av-edit { padding: 6px 14px; font-size: 12px; min-height: 0; height: 32px; }
-.ach-claim { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, #f4c46a 45%, transparent); background: color-mix(in srgb, #f4c46a 10%, transparent); font-family: var(--font-px); font-size: 12px; color: #f4c46a; }
+.ach-claim { margin: 0 26px 10px !important; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, #f4c46a 45%, transparent); background: color-mix(in srgb, #f4c46a 10%, transparent); font-family: var(--font-px); font-size: 12px; color: #f4c46a; }
 .ach-claim span { display: inline-flex; align-items: center; gap: 6px; }
 .ach-claim .btn, .ach-take { height: 30px; min-height: 0; padding: 4px 12px; font-size: 12px; }
 .ach-done { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

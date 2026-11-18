@@ -26,8 +26,8 @@ Add your games from anywhere (Steam, Epic, GOG, plain `.exe` files, shortcuts), 
 | **100+ achievements** to unlock, with coin rewards | **One-click import** of your Steam, Epic and GOG games |
 | ![Compact menu](docs/screenshots/library-compact-menu.png) | ![Light theme](docs/screenshots/library-light.png) |
 | **Auto-hiding menu** that pushes the content as it opens | **Light and dark themes**, any accent color |
-
-![Settings](docs/screenshots/settings.png)
+| ![Avatar editor](docs/screenshots/avatar-editor.png) | ![Settings](docs/screenshots/settings.png) |
+| **Pixel avatar** with hairstyles, outfits and a coin shop | **Settings**: sounds, performance, appearance, updates |
 
 ## Features
 

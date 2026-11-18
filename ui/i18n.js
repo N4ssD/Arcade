@@ -257,6 +257,8 @@
   const UNITS = { 'jeu': 'game', 'jeux': 'games', 'jours': 'days', 'lancements': 'launches', 'favoris': 'favorites', 'terminé': 'finished', 'terminés': 'finished', 'catégories': 'categories', 'h': 'h' };
   const RULES = [
     [/^(\d+) pièces gagnées$/, (m, n) => `${n} coins earned`],
+    [/^(\d+) pièces à récupérer$/, (m, n) => `${n} coins to collect`],
+    [/^\+(\d+) pièces récupérées$/, (m, n) => `+${n} coins collected`],
     [/^Ça fait (\d+) jours que tu n'as pas relancé (.+)\.$/, (m, n, g) => `It's been ${n} days since you last played ${g}.`],
     [/^Tu as joué (\d+) jours d'affilée, bravo !$/, (m, n) => `You've played ${n} days in a row, well done!`],
     [/^Tu as (\d+) pièces : va voir les nouveaux objets !$/, (m, n) => `You have ${n} coins: go check out the new items!`],
