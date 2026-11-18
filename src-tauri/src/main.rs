@@ -1210,9 +1210,11 @@ mod inst {
             Ok(p) => p,
             Err(_) => return false,
         };
+        // seul « Arcade.exe » est l'application ; « ArcadeSetup.exe » (le téléchargement) est toujours l'installeur
+        let is_app = me.file_name().map(|n| n.to_string_lossy().eq_ignore_ascii_case("Arcade.exe")).unwrap_or(false);
         let my_dir = me.parent().map(|p| p.to_string_lossy().to_lowercase()).unwrap_or_default();
         match installed_dir() {
-            Some(d) => d.to_string_lossy().trim_end_matches('\\').to_lowercase() == my_dir.trim_end_matches('\\') && d.join("Arcade.exe").exists(),
+            Some(d) => is_app && d.to_string_lossy().trim_end_matches('\\').to_lowercase() == my_dir.trim_end_matches('\\') && d.join("Arcade.exe").exists(),
             None => false,
         }
     }
@@ -1222,18 +1224,7 @@ mod inst {
         if args.iter().any(|a| a == "--portable") || std::env::var_os("ARCADE_PORTABLE").is_some() {
             return false;
         }
-        let me = match std::env::current_exe() {
-            Ok(p) => p,
-            Err(_) => return false,
-        };
-        let my_dir = me.parent().map(|p| p.to_string_lossy().to_lowercase()).unwrap_or_default();
-        match installed_dir() {
-            Some(d) => {
-                let same = d.to_string_lossy().trim_end_matches('\\').to_lowercase() == my_dir.trim_end_matches('\\');
-                !(same && d.join("Arcade.exe").exists())
-            }
-            None => true,
-        }
+        !running_installed()
     }
 
     pub fn default_dir() -> PathBuf {

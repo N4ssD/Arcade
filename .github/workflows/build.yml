@@ -16,13 +16,13 @@ jobs:
           workspaces: src-tauri
       - name: Compilation
         run: cargo build --release --manifest-path src-tauri/Cargo.toml
-      - name: Renommer en Arcade.exe
+      - name: Nommer le fichier ArcadeSetup.exe
         shell: bash
-        run: cp src-tauri/target/release/arcade.exe Arcade.exe
+        run: cp src-tauri/target/release/arcade.exe ArcadeSetup.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: Arcade
-          path: Arcade.exe
+          name: ArcadeSetup
+          path: ArcadeSetup.exe
       - name: Publier la dernière version
         shell: bash
         env:
@@ -30,4 +30,4 @@ jobs:
         run: |
           gh release delete rust-latest --yes --cleanup-tag || true
           gh release delete dernier --yes --cleanup-tag || true
-          gh release create dernier Arcade.exe --prerelease --title "Arcade (dernière version)" --notes "Télécharge Arcade.exe, lance-le et choisis où l'installer."
+          gh release create dernier ArcadeSetup.exe --prerelease --title "Arcade (dernière version)" --notes "Télécharge ArcadeSetup.exe, lance-le et choisis où l'installer."

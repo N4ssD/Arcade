@@ -1,7 +1,7 @@
 # Arcade
 
 Un lanceur de jeux moderne pour Windows, en français : ta bibliothèque, tes statistiques, tes succès, au même endroit.
-**Un seul fichier, `Arcade.exe`** : pas besoin d'Edge, de PowerShell ni d'installer quoi que ce soit d'autre.
+**Un seul fichier à télécharger, `ArcadeSetup.exe`** : pas besoin d'Edge, de PowerShell ni d'installer quoi que ce soit d'autre.
 
 ## Fonctionnalités
 
@@ -22,8 +22,8 @@ L'ancienne version complète (PowerShell) reste disponible dans la branche [`pow
 
 ## Télécharger
 
-1. Télécharge **[Arcade.exe](../../releases/download/dernier/Arcade.exe)** (page [Releases](../../releases)).
-2. Lance-le : la fenêtre d'installation te laisse choisir le dossier et les raccourcis.
+1. Télécharge **[ArcadeSetup.exe](../../releases/download/dernier/ArcadeSetup.exe)** (page [Releases](../../releases)).
+2. Lance-le : la fenêtre d'installation te laisse choisir le dossier et les raccourcis. L'application installée s'appelle `Arcade.exe`.
 
 > **Windows peut afficher « Windows a protégé votre ordinateur » (SmartScreen).**
 > L'exe n'est pas encore signé numériquement : ce n'est pas un signe de virus.
