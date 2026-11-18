@@ -1040,3 +1040,14 @@ body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: tra
 .toolbar .search input { padding: 0; height: 100%; }
 .toolbar select { appearance: none; -webkit-appearance: none; padding: 0 38px 0 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A9AAE' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 14px; }
 .toolbar select:focus { border-color: var(--accent); }
+
+/* Succès : récompenses et filtres */
+.ach-sum-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ach-tabs { display: flex; gap: 8px; padding: 0 26px 12px; }
+.ach-tab { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--font-px); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+.ach-tab:hover { color: var(--text); background: var(--hover); }
+.ach-tab.on { color: var(--strong); background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.ach-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ach-rw { display: inline-flex; align-items: center; gap: 5px; flex: none; font-family: var(--font-px); font-size: 12px; letter-spacing: .5px; color: #f4c46a; }
+.ach:not(.ok) .ach-rw { opacity: .7; }
+.ach-grid { max-height: min(54vh, 460px); }

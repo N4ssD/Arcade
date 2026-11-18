@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.0 — 101 achievements and coin rewards
+- 80+ new achievements: play time, streaks, days played, big sessions, different games, night or morning launches, customization, avatar, shop, levels, coins, and even achievements about achievements.
+- Every achievement now pays coins by tier: 10 (bronze), 25 (silver), 50 (gold) or 100 (legend), to spend in the avatar shop.
+- Nothing is unlocked in advance: on first launch Arcade records where you stand and only progress made from then on counts (the original 18 keep their usual calculation if you already had them).
+- Achievements window: All / To unlock / Unlocked filters, the reward of each achievement and the total of coins earned.
+
 ## 2.6.0 — More looks, smoother avatar
 - 5 new hairstyles (ponytail, bun, bob, mohawk, afro), 5 new tops (tank top, shirt, Hawaiian shirt, overalls, armor) and a skirt.
 - Animations rebuilt: gentle breathing, blinking, head and arms moving with a slight delay, a squash-and-stretch jump when happy, a nodding head when asleep, a tapping foot when impatient.

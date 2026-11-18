@@ -23,7 +23,7 @@ Add your games from anywhere (Steam, Epic, GOG, plain `.exe` files, shortcuts), 
 | ![Game page](docs/screenshots/game-details.png) | ![Statistics](docs/screenshots/statistics.png) |
 | **Game page** with play time, last session and launches | **Live statistics**: streaks, weekly trend, most played, by category |
 | ![Achievements](docs/screenshots/achievements.png) | ![Import](docs/screenshots/import-games.png) |
-| **18 achievements** to unlock | **One-click import** of your Steam, Epic and GOG games |
+| **100+ achievements** to unlock, with coin rewards | **One-click import** of your Steam, Epic and GOG games |
 | ![Compact menu](docs/screenshots/library-compact-menu.png) | ![Light theme](docs/screenshots/library-light.png) |
 | **Auto-hiding menu** that pushes the content as it opens | **Light and dark themes**, any accent color |
 

@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.6.0";
+const VERSION: &str = "2.7.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -203,7 +203,7 @@ fn default_settings() -> Obj {
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
         "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false,
-        "avatarOn": true, "avatarPanel": true, "avatarAuto": true, "avatar": {}
+        "avatarOn": true, "avatarPanel": true, "avatarAuto": true, "avatar": {}, "counters": {}, "achBase": {}
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -272,7 +272,7 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
                 settings.insert(k.into(), Value::Object(cur));
             }
         }
-        "avatar" => {
+        "avatar" | "counters" | "achBase" => {
             // Avatar : petit dictionnaire (chaînes courtes, nombres, liste d'objets possédés), nettoyé champ par champ
             if let Some(o) = v.as_object() {
                 let mut out = Obj::new();

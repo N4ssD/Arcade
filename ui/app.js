@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.6.0';
+  const APP_VERSION = '2.7.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -57,6 +57,10 @@
     rocket: '<svg viewBox="0 0 24 24"><path d="M12 3.5c3.2 2 4.8 5 4.8 8.5l-2 3.5H9.2l-2-3.5C7.2 8.5 8.8 5.5 12 3.5z"/><circle cx="12" cy="10" r="1.4"/><path d="M9.2 15.5L7 19l3-1M14.8 15.5L17 19l-3-1"/></svg>',
     hist: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9L4 8.5"/><path d="M4 4v4.5h4.5M12 8v4.5l3 1.5"/></svg>',
     copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></svg>',
+    moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
+    bag: '<svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>',
+    user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
     play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
     star: '<svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
     dots: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>',
@@ -973,6 +977,7 @@
     const r = await api.launch(g.id);
     if (!r.ok) return toast(r.error || 'Impossible de lancer ce jeu.', 'error');
     Sound.play('launch');
+    { const hr = new Date().getHours(); if (hr >= 22 || hr < 5) bump('nightLaunch'); else if (hr >= 5 && hr < 9) bump('morningLaunch'); }
     toast(`${g.name} se lance…`, 'ok');
     await load();
   }
@@ -1019,7 +1024,11 @@
   function closeModal() { const r = $('#modal-root'); if (!r.hidden) Sound.play('close'); r.hidden = true; r.replaceChildren(); }
 
   // ---------- Succès Arcade ----------
-  // tier : 1 bronze, 2 argent, 3 or, 4 légende (violet)
+  // tier : 1 bronze, 2 argent, 3 or, 4 légende (violet). Chaque succès rapporte des pièces selon son palier.
+  const ACH_REWARD = { 1: 10, 2: 25, 3: 50, 4: 100 };
+  const H = 3600;
+  // Les 18 succès d'origine comptent en valeur absolue ; tous les autres ne comptent que ce que tu fais APRÈS ta première ouverture (voir achBase)
+  const ACH_LEGACY = ['g1', 'g10', 'g25', 'g50', 't1', 't10', 't100', 't500', 's3', 's7', 's30', 'l10', 'l100', 'm10', 'f5', 'd1', 'd10', 'c3'];
   const ACH = [
     { id: 'g1', n: 'Premier pas', d: 'Ajoute ton premier jeu.', ic: 'folder', t: 1, goal: 1, unit: 'jeu', k: 'games' },
     { id: 'g10', n: 'Collectionneur', d: 'Ajoute 10 jeux.', ic: 'folder', t: 1, goal: 10, unit: 'jeux', k: 'games' },
@@ -1039,19 +1048,140 @@
     { id: 'd1', n: 'Générique de fin', d: 'Marque un jeu comme terminé.', ic: 'check', t: 1, goal: 1, unit: 'terminé', k: 'finished' },
     { id: 'd10', n: 'Complétionniste', d: 'Marque 10 jeux comme terminés.', ic: 'check', t: 3, goal: 10, unit: 'terminés', k: 'finished' },
     { id: 'c3', n: 'Organisé', d: 'Crée 3 catégories.', ic: 'tag', t: 1, goal: 3, unit: 'catégories', k: 'cats' },
-  ];
-  function achStats() {
+  ].concat([
+    // [id, nom, description, name, description, icône, palier, objectif, unité, unit, clé]
+    ['g5', 'Petit début', 'Ajoute 5 jeux.', 'Small start', 'Add 5 games.', 'folder', 1, 5, 'jeux', 'games', 'games'],
+    ['g100', 'Ludothèque géante', 'Ajoute 100 jeux.', 'Giant library', 'Add 100 games.', 'crown', 4, 100, 'jeux', 'games', 'games'],
+    ['t5', 'Mise en jambes', 'Cumule 5 h de jeu.', 'Limbering up', 'Play 5 hours in total.', 'clock', 1, 5 * H, 'h', 'h', 'sec'],
+    ['t25', 'Joueur assidu', 'Cumule 25 h de jeu.', 'Dedicated player', 'Play 25 hours in total.', 'clock', 2, 25 * H, 'h', 'h', 'sec'],
+    ['t50', 'Demi-centurion', 'Cumule 50 h de jeu.', 'Half-centurion', 'Play 50 hours in total.', 'clock', 2, 50 * H, 'h', 'h', 'sec'],
+    ['t250', 'Vétéran', 'Cumule 250 h de jeu.', 'Veteran', 'Play 250 hours in total.', 'clock', 3, 250 * H, 'h', 'h', 'sec'],
+    ['t1000', 'Mille heures', 'Cumule 1 000 h de jeu.', 'A thousand hours', 'Play 1,000 hours in total.', 'crown', 4, 1000 * H, 'h', 'h', 'sec'],
+    ['s2', 'Deux jours de suite', 'Joue 2 jours d\'affilée.', 'Two in a row', 'Play 2 days in a row.', 'flame', 1, 2, 'jours', 'days', 'streakS'],
+    ['s5', 'Cinq à la suite', 'Joue 5 jours d\'affilée.', 'Five in a row', 'Play 5 days in a row.', 'flame', 1, 5, 'jours', 'days', 'streakS'],
+    ['s14', 'Quinzaine', 'Joue 14 jours d\'affilée.', 'Fortnight', 'Play 14 days in a row.', 'flame', 3, 14, 'jours', 'days', 'streakS'],
+    ['s21', 'Trois semaines', 'Joue 21 jours d\'affilée.', 'Three weeks', 'Play 21 days in a row.', 'flame', 3, 21, 'jours', 'days', 'streakS'],
+    ['s60', 'Deux mois', 'Joue 60 jours d\'affilée.', 'Two months', 'Play 60 days in a row.', 'flame', 4, 60, 'jours', 'days', 'streakS'],
+    ['s100', 'Centenaire', 'Joue 100 jours d\'affilée.', 'Centenarian', 'Play 100 days in a row.', 'flame', 4, 100, 'jours', 'days', 'streakS'],
+    ['p3', 'Retour gagnant', 'Joue pendant 3 jours différents.', 'Winning return', 'Play on 3 different days.', 'calendar', 1, 3, 'jours', 'days', 'daysS'],
+    ['p10', 'Fidèle au poste', 'Joue pendant 10 jours différents.', 'Faithful', 'Play on 10 different days.', 'calendar', 1, 10, 'jours', 'days', 'daysS'],
+    ['p30', 'Une habitude', 'Joue pendant 30 jours différents.', 'A habit', 'Play on 30 different days.', 'calendar', 2, 30, 'jours', 'days', 'daysS'],
+    ['p60', 'Bien installé', 'Joue pendant 60 jours différents.', 'Settled in', 'Play on 60 different days.', 'calendar', 3, 60, 'jours', 'days', 'daysS'],
+    ['p100', 'Pilier du lanceur', 'Joue pendant 100 jours différents.', 'Pillar of the launcher', 'Play on 100 different days.', 'calendar', 3, 100, 'jours', 'days', 'daysS'],
+    ['p200', 'Vieux de la vieille', 'Joue pendant 200 jours différents.', 'Old-timer', 'Play on 200 different days.', 'calendar', 4, 200, 'jours', 'days', 'daysS'],
+    ['p365', 'Une année entière', 'Joue pendant 365 jours différents.', 'A whole year', 'Play on 365 different days.', 'calendar', 4, 365, 'jours', 'days', 'daysS'],
+    ['l25', 'Rampe de lancement', 'Lance des jeux 25 fois.', 'Launch pad', 'Launch games 25 times.', 'rocket', 1, 25, 'lancements', 'launches', 'launches'],
+    ['l50', 'Décollage réussi', 'Lance des jeux 50 fois.', 'Successful liftoff', 'Launch games 50 times.', 'rocket', 2, 50, 'lancements', 'launches', 'launches'],
+    ['l250', 'Pilote confirmé', 'Lance des jeux 250 fois.', 'Seasoned pilot', 'Launch games 250 times.', 'rocket', 3, 250, 'lancements', 'launches', 'launches'],
+    ['l500', 'Commandant de bord', 'Lance des jeux 500 fois.', 'Flight commander', 'Launch games 500 times.', 'rocket', 3, 500, 'lancements', 'launches', 'launches'],
+    ['l1000', 'Maître de la flotte', 'Lance des jeux 1 000 fois.', 'Fleet master', 'Launch games 1,000 times.', 'rocket', 4, 1000, 'lancements', 'launches', 'launches'],
+    ['m5', 'Accro', 'Passe 5 h de plus sur un même jeu.', 'Hooked', 'Spend 5 more hours on a single game.', 'hist', 1, 5 * H, 'h', 'h', 'maxGame'],
+    ['m25', 'Fidèle à un jeu', 'Passe 25 h de plus sur un même jeu.', 'Loyal to one game', 'Spend 25 more hours on a single game.', 'hist', 2, 25 * H, 'h', 'h', 'maxGame'],
+    ['m50', 'Passion dévorante', 'Passe 50 h de plus sur un même jeu.', 'Burning passion', 'Spend 50 more hours on a single game.', 'hist', 3, 50 * H, 'h', 'h', 'maxGame'],
+    ['m100', 'Cent heures, un seul jeu', 'Passe 100 h de plus sur un même jeu.', 'One game, a hundred hours', 'Spend 100 more hours on a single game.', 'hist', 4, 100 * H, 'h', 'h', 'maxGame'],
+    ['r2', 'Grosse session', 'Joue 2 h en une journée.', 'Big session', 'Play 2 hours in a single day.', 'clock', 1, 2 * H, 'h', 'h', 'maxDayS'],
+    ['r4', 'Journée de gamer', 'Joue 4 h en une journée.', 'Gamer day', 'Play 4 hours in a single day.', 'clock', 2, 4 * H, 'h', 'h', 'maxDayS'],
+    ['r6', 'Week-end sur canapé', 'Joue 6 h en une journée.', 'Couch weekend', 'Play 6 hours in a single day.', 'clock', 3, 6 * H, 'h', 'h', 'maxDayS'],
+    ['r10', 'Marathonien', 'Joue 10 h en une journée.', 'Marathon runner', 'Play 10 hours in a single day.', 'clock', 4, 10 * H, 'h', 'h', 'maxDayS'],
+    ['v3', 'Curieux', 'Joue à 3 jeux différents.', 'Curious', 'Play 3 different games.', 'play', 1, 3, 'jeux', 'games', 'playedS'],
+    ['v10', 'Papillon', 'Joue à 10 jeux différents.', 'Butterfly', 'Play 10 different games.', 'play', 2, 10, 'jeux', 'games', 'playedS'],
+    ['v25', 'Touche-à-tout', 'Joue à 25 jeux différents.', 'Jack of all trades', 'Play 25 different games.', 'play', 3, 25, 'jeux', 'games', 'playedS'],
+    ['v50', 'Globe-trotter', 'Joue à 50 jeux différents.', 'Globetrotter', 'Play 50 different games.', 'play', 4, 50, 'jeux', 'games', 'playedS'],
+    ['f1', 'Premier favori', 'Mets un jeu en favori.', 'First favorite', 'Mark a game as a favorite.', 'star', 1, 1, 'favori', 'favorite', 'favs'],
+    ['f15', 'Cœur d\'artichaut', 'Mets 15 jeux en favoris.', 'Soft spot', 'Mark 15 games as favorites.', 'star', 2, 15, 'favoris', 'favorites', 'favs'],
+    ['f30', 'Tout en favoris', 'Mets 30 jeux en favoris.', 'Everything is a favorite', 'Mark 30 games as favorites.', 'star', 3, 30, 'favoris', 'favorites', 'favs'],
+    ['d5', 'Terminator', 'Marque 5 jeux comme terminés.', 'Terminator', 'Mark 5 games as finished.', 'check', 2, 5, 'terminés', 'finished', 'finished'],
+    ['d25', 'Chasseur de crédits', 'Marque 25 jeux comme terminés.', 'Credits hunter', 'Mark 25 games as finished.', 'check', 4, 25, 'terminés', 'finished', 'finished'],
+    ['c1', 'Première catégorie', 'Crée une catégorie.', 'First category', 'Create a category.', 'tag', 1, 1, 'catégorie', 'category', 'cats'],
+    ['c6', 'Maniaque du rangement', 'Crée 6 catégories.', 'Tidy freak', 'Create 6 categories.', 'tag', 2, 6, 'catégories', 'categories', 'cats'],
+    ['c10', 'Archiviste', 'Crée 10 catégories.', 'Archivist', 'Create 10 categories.', 'tag', 3, 10, 'catégories', 'categories', 'cats'],
+    ['o3', 'De retour', 'Ouvre Arcade 3 fois.', 'Back again', 'Open Arcade 3 times.', 'play', 1, 3, 'ouvertures', 'times', 'opens'],
+    ['o10', 'Habitué des lieux', 'Ouvre Arcade 10 fois.', 'Regular', 'Open Arcade 10 times.', 'play', 1, 10, 'ouvertures', 'times', 'opens'],
+    ['o30', 'Comme à la maison', 'Ouvre Arcade 30 fois.', 'Like home', 'Open Arcade 30 times.', 'play', 2, 30, 'ouvertures', 'times', 'opens'],
+    ['o100', 'Fidèle d\'Arcade', 'Ouvre Arcade 100 fois.', 'Arcade loyalist', 'Open Arcade 100 times.', 'play', 3, 100, 'ouvertures', 'times', 'opens'],
+    ['o365', 'Résident permanent', 'Ouvre Arcade 365 fois.', 'Permanent resident', 'Open Arcade 365 times.', 'play', 4, 365, 'ouvertures', 'times', 'opens'],
+    ['lk1', 'Coup de dé', 'Utilise « Surprends-moi » une fois.', 'Roll of the dice', 'Use “Surprise me” once.', 'dice', 1, 1, 'fois', 'times', 'lucky'],
+    ['lk10', 'Joueur de hasard', 'Utilise « Surprends-moi » 10 fois.', 'Gambler', 'Use “Surprise me” 10 times.', 'dice', 2, 10, 'fois', 'times', 'lucky'],
+    ['lk50', 'Roi du hasard', 'Utilise « Surprends-moi » 50 fois.', 'King of chance', 'Use “Surprise me” 50 times.', 'dice', 3, 50, 'fois', 'times', 'lucky'],
+    ['sc1', 'Explorateur', 'Scanne un dossier à la recherche de jeux.', 'Explorer', 'Scan a folder for games.', 'folder', 1, 1, 'scan', 'scan', 'scans'],
+    ['sc5', 'Cartographe', 'Scanne 5 dossiers.', 'Cartographer', 'Scan 5 folders.', 'folder', 2, 5, 'scans', 'scans', 'scans'],
+    ['im1', 'Importateur', 'Lance un import Steam / Epic / GOG.', 'Importer', 'Start a Steam / Epic / GOG import.', 'folder', 1, 1, 'import', 'import', 'imports'],
+    ['im3', 'Grand déménagement', 'Lance 3 imports.', 'Big move', 'Start 3 imports.', 'folder', 2, 3, 'imports', 'imports', 'imports'],
+    ['nl1', 'Noctambule', 'Lance un jeu entre 22 h et 5 h.', 'Night owl', 'Launch a game between 10 pm and 5 am.', 'moon', 1, 1, 'lancement', 'launch', 'nightLaunch'],
+    ['nl10', 'Oiseau de nuit', 'Lance 10 jeux entre 22 h et 5 h.', 'Nighthawk', 'Launch 10 games between 10 pm and 5 am.', 'moon', 2, 10, 'lancements', 'launches', 'nightLaunch'],
+    ['nl50', 'Hibou', 'Lance 50 jeux entre 22 h et 5 h.', 'Owl', 'Launch 50 games between 10 pm and 5 am.', 'moon', 3, 50, 'lancements', 'launches', 'nightLaunch'],
+    ['ml1', 'Lève-tôt', 'Lance un jeu entre 5 h et 9 h.', 'Early bird', 'Launch a game between 5 am and 9 am.', 'sun', 1, 1, 'lancement', 'launch', 'morningLaunch'],
+    ['ml10', 'Café et manette', 'Lance 10 jeux entre 5 h et 9 h.', 'Coffee and controller', 'Launch 10 games between 5 am and 9 am.', 'sun', 2, 10, 'lancements', 'launches', 'morningLaunch'],
+    ['ml30', 'Aube numérique', 'Lance 30 jeux entre 5 h et 9 h.', 'Digital dawn', 'Launch 30 games between 5 am and 9 am.', 'sun', 3, 30, 'lancements', 'launches', 'morningLaunch'],
+    ['av1', 'Nouveau look', 'Enregistre ton avatar.', 'New look', 'Save your avatar.', 'user', 1, 1, 'fois', 'times', 'avatarSaves'],
+    ['av10', 'Styliste', 'Enregistre ton avatar 10 fois.', 'Stylist', 'Save your avatar 10 times.', 'user', 2, 10, 'fois', 'times', 'avatarSaves'],
+    ['sh1', 'Premier achat', 'Achète un objet pour ton avatar.', 'First purchase', 'Buy an item for your avatar.', 'bag', 1, 1, 'achat', 'purchase', 'purchases'],
+    ['sh5', 'Client fidèle', 'Achète 5 objets.', 'Loyal customer', 'Buy 5 items.', 'bag', 2, 5, 'achats', 'purchases', 'purchases'],
+    ['sh15', 'Accro au shopping', 'Achète 15 objets.', 'Shopaholic', 'Buy 15 items.', 'bag', 3, 15, 'achats', 'purchases', 'purchases'],
+    ['sh30', 'Garde-robe infinie', 'Achète 30 objets.', 'Endless wardrobe', 'Buy 30 items.', 'bag', 4, 30, 'achats', 'purchases', 'purchases'],
+    ['th3', 'Caméléon', 'Change 3 fois le thème d\'Arcade.', 'Chameleon', 'Change Arcade\'s theme 3 times.', 'sun', 1, 3, 'fois', 'times', 'themeChanges'],
+    ['ac5', 'Coloriste', 'Change 5 fois la couleur d\'accent.', 'Colorist', 'Change the accent color 5 times.', 'user', 2, 5, 'fois', 'times', 'accentChanges'],
+    ['lv3', 'Montée en puissance', 'Gagne 3 niveaux.', 'Power up', 'Gain 3 levels.', 'crown', 1, 3, 'niveaux', 'levels', 'level'],
+    ['lv6', 'Aventurier', 'Gagne 6 niveaux.', 'Adventurer', 'Gain 6 levels.', 'crown', 2, 6, 'niveaux', 'levels', 'level'],
+    ['lv12', 'Héros', 'Gagne 12 niveaux.', 'Hero', 'Gain 12 levels.', 'crown', 3, 12, 'niveaux', 'levels', 'level'],
+    ['lv25', 'Légende', 'Gagne 25 niveaux.', 'Legend', 'Gain 25 levels.', 'crown', 4, 25, 'niveaux', 'levels', 'level'],
+    ['e100', 'Tirelire', 'Gagne 100 pièces.', 'Piggy bank', 'Earn 100 coins.', 'bag', 1, 100, 'pièces', 'coins', 'earned'],
+    ['e500', 'Petit pécule', 'Gagne 500 pièces.', 'Nest egg', 'Earn 500 coins.', 'bag', 2, 500, 'pièces', 'coins', 'earned'],
+    ['e1500', 'Fortune', 'Gagne 1 500 pièces.', 'Fortune', 'Earn 1,500 coins.', 'bag', 3, 1500, 'pièces', 'coins', 'earned'],
+    ['e5000', 'Roi de l\'or', 'Gagne 5 000 pièces.', 'Gold king', 'Earn 5,000 coins.', 'bag', 4, 5000, 'pièces', 'coins', 'earned'],
+    ['a10', 'Chasseur de succès', 'Débloque 10 succès.', 'Achievement hunter', 'Unlock 10 achievements.', 'trophy', 2, 10, 'succès', 'achievements', 'achCount'],
+    ['a25', 'Collectionneur de trophées', 'Débloque 25 succès.', 'Trophy collector', 'Unlock 25 achievements.', 'trophy', 3, 25, 'succès', 'achievements', 'achCount'],
+    ['a50', 'Maître des succès', 'Débloque 50 succès.', 'Achievement master', 'Unlock 50 achievements.', 'trophy', 4, 50, 'succès', 'achievements', 'achCount'],
+    ['a75', 'Platine', 'Débloque 75 succès.', 'Platinum', 'Unlock 75 achievements.', 'trophy', 4, 75, 'succès', 'achievements', 'achCount'],
+  ].map(([id, n, d, en, ed, ic, t, goal, unit, ue, k]) => ({ id, n, d, en, ed, ic, t, goal, unit, ue, k })));
+  ACH.forEach((a) => { a.reward = ACH_REWARD[a.t]; a.legacy = ACH_LEGACY.includes(a.id); });
+  const achName = (a) => (ARC.lang === 'en' && a.en) || a.n;
+  const achDesc = (a) => (ARC.lang === 'en' && a.ed) || a.d;
+  const achUnit = (a) => (ARC.lang === 'en' && a.ue) || a.unit;
+  const dayNum = (s) => Number(String(s).replace(/-/g, '')) || 0;
+  const counters = () => (state.settings && state.settings.counters) || {};
+  let bumpT = null, evalT = null;
+  function bump(k, n = 1) {
+    const c = { ...counters() }; c[k] = (c[k] || 0) + n;
+    state.settings.counters = c;
+    clearTimeout(bumpT); bumpT = setTimeout(() => api.setSettings({ counters: state.settings.counters }).catch(() => {}), 800);
+    clearTimeout(evalT); evalT = setTimeout(evalAchievements, 700);
+  }
+  const rewardSum = (done) => ACH.reduce((s, a) => s + (done[a.id] ? a.reward : 0), 0);
+  // Statistiques brutes. `since` (numéro de jour) limite certaines mesures aux jours postérieurs à la première ouverture.
+  function achStats(done, base) {
+    done = done || achDone();
     const g = state.games || [], daily = state.daily || {};
     const days = Object.keys(daily).filter((k) => daily[k] > 0).sort();
-    let best = 0, run = 0, prev = null;
-    for (const k of days) {
-      const t = Date.parse(k + 'T12:00:00');
-      run = prev !== null && Math.round((t - prev) / 86400000) === 1 ? run + 1 : 1;
-      best = Math.max(best, run); prev = t;
-    }
-    return { games: g.length, sec: g.reduce((s, x) => s + (x.playtime || 0), 0), launches: g.reduce((s, x) => s + (x.launches || 0), 0),
+    const streakOf = (list) => {
+      let best = 0, run = 0, prev = null;
+      for (const k of list) {
+        const t = Date.parse(k + 'T12:00:00');
+        run = prev !== null && Math.round((t - prev) / 86400000) === 1 ? run + 1 : 1;
+        best = Math.max(best, run); prev = t;
+      }
+      return best;
+    };
+    const since = base && base.day ? base.day : 0;
+    const after = days.filter((k) => dayNum(k) >= since);
+    const sec = g.reduce((s, x) => s + (x.playtime || 0), 0);
+    const c = counters();
+    const a0 = avData();
+    const pr = AV ? AV.progress(sec, Object.keys(done).length, rewardSum(done)) : { level: 1, earned: Math.floor(sec / 3600) };
+    return { games: g.length, sec, launches: g.reduce((s, x) => s + (x.launches || 0), 0),
       favs: g.filter((x) => x.favorite).length, finished: g.filter((x) => x.finished).length, cats: (state.categories || []).length,
-      maxGame: g.reduce((m, x) => Math.max(m, x.playtime || 0), 0), streak: best };
+      maxGame: g.reduce((m, x) => Math.max(m, x.playtime || 0), 0), streak: streakOf(days), streakS: streakOf(after), daysS: after.length,
+      maxDayS: after.reduce((m, k) => Math.max(m, daily[k] || 0), 0), playedS: g.filter((x) => (x.playtime || 0) > 0).length,
+      achCount: Object.keys(done).length, level: pr.level, earned: pr.earned, ownedItems: a0 ? a0.owned.length : 0,
+      opens: c.opens || 0, lucky: c.lucky || 0, scans: c.scans || 0, imports: c.imports || 0, nightLaunch: c.nightLaunch || 0, morningLaunch: c.morningLaunch || 0,
+      avatarSaves: c.avatarSaves || 0, purchases: c.purchases || 0, themeChanges: c.themeChanges || 0, accentChanges: c.accentChanges || 0 };
+  }
+  const achBase = () => (state.settings && state.settings.achBase) || {};
+  // Valeur d'un succès : les 18 d'origine en absolu (sauf toute première ouverture), les autres seulement depuis la première ouverture
+  function achVal(a, st, base) {
+    if (a.legacy && !base.first) return st[a.k] || 0;
+    if (a.k === 'streakS' || a.k === 'daysS' || a.k === 'maxDayS') return st[a.k] || 0;
+    return Math.max(0, (st[a.k] || 0) - (base[a.k] || 0));
   }
   const achDone = () => (state.settings && state.settings.achievements) || {};
   function updateAchCount() { const e = $('#ach-count'); if (e) e.textContent = Object.keys(achDone()).length + '/' + ACH.length; }
@@ -1059,36 +1189,58 @@
   async function evalAchievements() {
     if (achBusy || !state.settings) return; achBusy = true;
     try {
-      const st = achStats(), done = achDone(), fresh = {};
-      const now = new Date().toISOString().slice(0, 10);
-      for (const a of ACH) if (!done[a.id] && st[a.k] >= a.goal) fresh[a.id] = now;
+      let done = { ...achDone() };
+      let base = achBase();
+      // Toute première fois : on note où tu en es. Rien ne se débloque d'avance : seuls tes progrès à partir de maintenant comptent.
+      if (typeof base.first === 'undefined') {
+        const first = Object.keys(done).length === 0 ? 1 : 0;
+        const raw = achStats(done, null);
+        base = { first, day: dayNum(new Date().toISOString().slice(0, 10)) };
+        for (const [k, v] of Object.entries(raw)) if (Number.isFinite(v)) base[k] = Math.floor(v);
+        state.settings.achBase = base;
+        try { await api.setSettings({ achBase: base }); } catch (_) {}
+      }
+      const fresh = {}, now = new Date().toISOString().slice(0, 10);
+      for (let pass = 0; pass < 6; pass++) {
+        const st = achStats(done, base);
+        let any = false;
+        for (const a of ACH) if (!done[a.id] && achVal(a, st, base) >= a.goal) { fresh[a.id] = now; done[a.id] = now; any = true; }
+        if (!any) break;
+      }
       const ids = Object.keys(fresh);
       if (ids.length) {
-        state.settings.achievements = { ...done, ...fresh };
+        state.settings.achievements = { ...achDone(), ...fresh };
         try { await api.setSettings({ achievements: fresh }); } catch (_) {}
-        if (ids.length > 3) toast(ids.length + ' succès débloqués ! Ouvre « Succès » pour les voir.', 'ok');
-        else ids.forEach((id, i) => setTimeout(() => toast('Succès débloqué : ' + ACH.find((a) => a.id === id).n, 'ok'), i * 700));
+        const coins = ids.reduce((s, id) => s + ACH.find((a) => a.id === id).reward, 0), en = ARC.lang === 'en';
+        if (ids.length > 3) toast(en ? `${ids.length} achievements unlocked (+${coins} coins)! Open “Achievements” to see them.` : `${ids.length} succès débloqués (+${coins} pièces) ! Ouvre « Succès » pour les voir.`, 'ok');
+        else ids.forEach((id, i) => setTimeout(() => { const a = ACH.find((x) => x.id === id); toast(en ? `Achievement unlocked: ${achName(a)} (+${a.reward} coins)` : `Succès débloqué : ${achName(a)} (+${a.reward} pièces)`, 'ok'); }, i * 700));
         Sound.play('success');
         if (!$('#modal-root').hidden && $('#modal-root').querySelector('.ach-modal')) openAch();
+        if (typeof renderAvatar === 'function') renderAvatar();
       }
     } finally { achBusy = false; updateAchCount(); }
   }
   const achFmt = (a, v) => a.unit === 'h' ? (Math.floor(v / 360) / 10).toString().replace('.', ARC.decimal) : String(Math.floor(v));
+  let achFilter = 'all';
   function openAch() {
-    const st = achStats(), done = achDone();
-    const total = ACH.length, got = ACH.filter((a) => done[a.id]).length;
+    const base = achBase(), st = achStats(achDone(), base), done = achDone();
+    const total = ACH.length, got = ACH.filter((a) => done[a.id]).length, won = rewardSum(done);
+    const list = ACH.filter((a) => achFilter === 'all' || (achFilter === 'done' ? !!done[a.id] : !done[a.id]));
+    const tab = (id, label) => h('button', { class: 'ach-tab' + (achFilter === id ? ' on' : ''), 'data-snd': 'tick', text: label, onClick: () => { achFilter = id; openAch(); } });
     openModal(h('div', { class: 'modal ach-modal' },
       h('h3', { text: 'Succès' }),
-      h('div', { class: 'ach-sum' }, h('b', { text: got + ' / ' + total + ' débloqués' }),
+      h('div', { class: 'ach-sum' }, h('div', { class: 'ach-sum-top' }, h('b', { text: got + ' / ' + total + ' débloqués' }), h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), won + ' pièces gagnées')),
         h('div', { class: 'd-bar' }, h('i', { style: { width: Math.max(2, Math.round(got / total * 100)) + '%' } }))),
-      h('div', { class: 'modal-body ach-grid' }, ACH.map((a) => {
-        const ok = !!done[a.id], cur = Math.min(st[a.k] || 0, a.goal);
+      h('div', { class: 'ach-tabs' }, tab('all', 'Tous'), tab('todo', 'À débloquer'), tab('done', 'Débloqués')),
+      h('div', { class: 'modal-body ach-grid' }, list.map((a) => {
+        const ok = !!done[a.id], cur = Math.min(achVal(a, st, base), a.goal);
         return h('div', { class: 'ach t' + a.t + (ok ? ' ok' : '') },
           h('div', { class: 'ach-ic' }, icon(ok ? a.ic : 'trophy')),
           h('div', { class: 'ach-tx' },
-            h('b', { text: a.n }), h('small', { text: a.d }),
+            h('div', { class: 'ach-name' }, h('b', { text: achName(a) }), h('span', { class: 'ach-rw' }, h('i', { class: 'av-coin' }), '+' + a.reward)),
+            h('small', { text: achDesc(a) }),
             ok ? h('span', { class: 'ach-date', text: 'Débloqué le ' + done[a.id].split('-').reverse().join('/') })
-               : h('div', { class: 'ach-prog' }, h('div', { class: 'd-bar' }, h('i', { style: { width: Math.round(cur / a.goal * 100) + '%' } })), h('span', { text: achFmt(a, cur) + ' / ' + achFmt(a, a.goal) + ' ' + a.unit }))));
+               : h('div', { class: 'ach-prog' }, h('div', { class: 'd-bar' }, h('i', { style: { width: Math.round(cur / a.goal * 100) + '%' } })), h('span', { text: achFmt(a, cur) + ' / ' + achFmt(a, a.goal) + ' ' + achUnit(a) }))));
       })),
       h('div', { class: 'modal-foot' }, h('button', { class: 'btn primary', onClick: closeModal, text: 'Fermer' }))
     ));
@@ -1099,7 +1251,7 @@
   const AV = window.ARCAV;
   const avOn = () => !!AV && state.settings.avatarOn !== false;
   const avData = () => AV.sanitize(state.settings.avatar);
-  function avStats() { const st = achStats(); return AV.progress(st.sec, Object.keys(achDone()).length); }
+  function avStats() { const done = achDone(); return AV.progress(achStats(done, achBase()).sec, Object.keys(done).length, rewardSum(done)); }
   const avCoins = (a) => Math.max(0, avStats().earned - a.spent);
   function svgNode(str) { const t = document.createElement('template'); t.innerHTML = str; return t.content.firstChild; } // str vient de ARCAV.svg (valeurs validées)
   let avMsgIdx = 0;
@@ -1220,7 +1372,7 @@
       if (!unlocked(it)) {
         if (it.ach) return toast('Verrouillé : ' + it.need + ' pour le débloquer.');
         if (coins() < it.price) return toast('Il te manque ' + (it.price - coins()) + ' pièces pour « ' + it.n + ' ».');
-        d.spent += it.price; d.owned = [...d.owned, it.id]; Sound.play('success'); toast('Acheté : ' + it.n, 'ok');
+        d.spent += it.price; d.owned = [...d.owned, it.id]; bump('purchases'); Sound.play('success'); toast('Acheté : ' + it.n, 'ok');
       } else Sound.play('tick');
       d[c.key] = it.id; paint();
     }
@@ -1260,7 +1412,7 @@
       h('div', { class: 'modal-foot' },
         h('button', { class: 'btn', text: 'Annuler', onClick: closeModal }),
         h('button', { class: 'btn primary', text: 'Enregistrer', onClick: async () => {
-          try { await setSetting({ avatar: d }); closeModal(); renderAvatar(); toast('Avatar enregistré.', 'ok'); } catch (e) { toast(e.message || String(e), 'error'); }
+          try { await setSetting({ avatar: d }); bump('avatarSaves'); closeModal(); renderAvatar(); toast('Avatar enregistré.', 'ok'); } catch (e) { toast(e.message || String(e), 'error'); }
         } }))));
   }
   document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#btn-avatar')) toggleAvatarPanel(); });
@@ -1268,6 +1420,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.7.0', title: '101 succès et des pièces à gagner', items: ['Plus de 80 nouveaux succès : temps de jeu, séries, jours joués, grosses sessions, jeux différents, lancements de nuit ou du matin, personnalisation, avatar, boutique, niveaux, pièces, et même des succès sur les succès.', 'Chaque succès rapporte des pièces selon son palier : 10 (bronze), 25 (argent), 50 (or) ou 100 (légende), à dépenser dans la boutique de l\'avatar.', 'Rien n\'est débloqué d\'avance : à ta première ouverture, Arcade note où tu en es, et seuls tes progrès à partir de là comptent (les 18 succès d\'origine gardent leur calcul habituel si tu les avais déjà).', 'Fenêtre Succès : filtres Tous / À débloquer / Débloqués, récompense de chaque succès et total de pièces gagnées.'] },
     { v: '2.6.0', title: 'Plus de looks, avatar plus fluide', items: ['5 nouvelles coiffures (queue de cheval, chignon, carré, crête, afro), 5 nouveaux hauts (débardeur, chemise, hawaï, salopette, armure) et une jupe.', 'Animations refaites : respiration douce, clignement des yeux, tête et bras qui bougent avec un léger décalage, saut avec écrasement quand il est content, tête qui penche quand il dort, pied qui tape quand il s\'impatiente.'] },
     { v: '2.5.1', title: 'Barre d\'outils harmonisée', items: ['Recherche, tri, Catégories, Surprends-moi et Plein écran ont maintenant la même hauteur, le même arrondi et le même fond.', 'La flèche de la liste de tri est décollée du bord.'] },
     { v: '2.5.0', title: 'Avatar vivant et volume à 30 %', items: ['L\'avatar réagit : il s\'endort quand tu es inactif, il est content quand tu lances un jeu (et quand tu reviens), il s\'impatiente si tu traînes dans les menus.', 'Tenues automatiques : pyjama la nuit, lunettes de soleil l\'après-midi, bonnet en hiver, costume de sorcière à Halloween (désactivable dans Paramètres > Apparence).', 'Le volume par défaut est maintenant de 30 % partout (une fois, y compris sur les installations existantes ; tu peux le changer dans Paramètres > Sons).'] },
@@ -1940,7 +2093,7 @@
   function themeRow() {
     const opts = [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']];
     const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
-      state.settings.theme = v; sync(); applyAppearance(); Sound.play('tick');
+      state.settings.theme = v; sync(); applyAppearance(); Sound.play('tick'); bump('themeChanges');
       try { await api.setSettings({ theme: v }); } catch (e) { toast(e.message || String(e), 'error'); }
     } }));
     const sync = () => btns.forEach((b, i) => b.classList.toggle('on', (state.settings.theme || 'dark') === opts[i][0]));
@@ -1953,7 +2106,7 @@
     const custom = h('label', { class: 'pcol custom', title: 'Couleur personnalisée' }, colorInput);
     let saveT = null;
     const save = () => { clearTimeout(saveT); saveT = setTimeout(() => api.setSettings({ accent: state.settings.accent }).catch((e) => toast(e.message || String(e), 'error')), 250); };
-    const sw = ACCENTS.map(([c, n]) => h('button', { type: 'button', class: 'pcol', style: { '--c': c }, title: n, 'data-snd': 'none', onClick: () => { state.settings.accent = c; colorInput.value = c; sync(); applyAppearance(); Sound.play('tick'); save(); } }));
+    const sw = ACCENTS.map(([c, n]) => h('button', { type: 'button', class: 'pcol', style: { '--c': c }, title: n, 'data-snd': 'none', onClick: () => { state.settings.accent = c; colorInput.value = c; sync(); applyAppearance(); Sound.play('tick'); save(); bump('accentChanges'); } }));
     const sync = () => {
       const c = cur(), known = ACCENTS.some(([x]) => x === c);
       sw.forEach((el, i) => el.classList.toggle('on', ACCENTS[i][0] === c));
@@ -2148,10 +2301,10 @@
   });
   $('#btn-add').addEventListener('click', () => openGameModal(null));
   $('#btn-add-empty').addEventListener('click', () => openGameModal(null));
-  $('#btn-scan').addEventListener('click', () => scanFlow());
-  $('#btn-import').addEventListener('click', () => importFlow());
-  $('#btn-import-empty').addEventListener('click', () => importFlow());
-  $('#btn-lucky').addEventListener('click', () => luckyFlow());
+  $('#btn-scan').addEventListener('click', () => { bump('scans'); scanFlow(); });
+  $('#btn-import').addEventListener('click', () => { bump('imports'); importFlow(); });
+  $('#btn-import-empty').addEventListener('click', () => { bump('imports'); importFlow(); });
+  $('#btn-lucky').addEventListener('click', () => { bump('lucky'); luckyFlow(); });
   $('#search').addEventListener('input', (e) => { state.query = e.target.value; render(); });
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
   $('#size').addEventListener('input', (e) => {
@@ -2310,6 +2463,7 @@
 
   api.onChanged(load);
   load().then(() => {
+    bump('opens');
     const reduce = reducedMotion();
     if (state.settings.introAnim === false || reduce) { splash.classList.add('quick'); endSplash(); return; }
     const n = state.games.length, st = $('#splash-status');

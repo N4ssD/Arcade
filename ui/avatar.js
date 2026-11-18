@@ -139,12 +139,12 @@
     return '<svg width="' + w + '" height="' + hgt + '" style="width:' + w + 'px;height:' + hgt + 'px;stroke:none" viewBox="' + VB.join(' ') + '" shape-rendering="crispEdges" aria-hidden="true">' + body + '</svg>';
   }
 
-  // Niveau : 1 + racine de (heures jouées + 5 par succès). Pièces : 1 par heure + 10 par succès, moins ce qui a été dépensé.
-  function progress(sec, achCount) {
+  // Niveau : 1 + racine de (heures jouées + 5 par succès). Pièces gagnées : 1 par heure jouée + la récompense de chaque succès ; on en retire ce qui a été dépensé.
+  function progress(sec, achCount, rewards) {
     const xp = sec / 3600 + 5 * achCount;
     const level = 1 + Math.floor(Math.sqrt(xp));
     const lo = (level - 1) ** 2, hi = level ** 2;
-    return { level, pct: Math.max(0, Math.min(1, (xp - lo) / (hi - lo))), earned: Math.floor(sec / 3600) + 10 * achCount };
+    return { level, pct: Math.max(0, Math.min(1, (xp - lo) / (hi - lo))), earned: Math.floor(sec / 3600) + (rewards || 0) };
   }
 
   window.ARCAV = { ITEMS, BGS, SKINS, HAIRS, CLOTHES, BOTTOMS, SHOES, DEFAULT, sanitize, svg, progress, free, has };
