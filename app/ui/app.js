@@ -1590,6 +1590,18 @@
     } else if (!shortcuts.length) toast('Dépose des raccourcis (.lnk, .url), ou utilise « Ajouter un jeu ».', 'error');
   });
 
+  // Application Rust (Tauri) : le système donne directement les chemins des fichiers déposés
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    const ev = window.__TAURI__.event;
+    ev.listen('arcade-drag', (e) => { $('#dropzone').classList.toggle('show', !!(e.payload && e.payload.over)); });
+    ev.listen('arcade-dropped', async (e) => {
+      const { added = 0, skipped = 0 } = e.payload || {};
+      if (added) { Sound.play('success'); toast(`${added} jeu(x) ajouté(s).`, 'ok'); await load(); }
+      else if (skipped) toast('Dépose des raccourcis (.lnk, .url) ou des .exe.', 'error');
+      else toast('Ce jeu est déjà dans ta bibliothèque.', '');
+    });
+  }
+
   // ---------- Paramètres ----------
   function switchRow(label, hint, key, extra) {
     const input = h('input', { type: 'checkbox' });
