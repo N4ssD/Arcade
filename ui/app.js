@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.0.0';
+  const APP_VERSION = '2.1.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -124,6 +124,37 @@
       h('b', { text: 'Ancienne version d\'Arcade détectée. ' }),
       "Certaines fonctions (catégories…) ne seront pas enregistrées. Ferme toutes les fenêtres Arcade, attends 10 secondes, puis relance Arcade (Arcade.vbs).");
     document.body.append(bar);
+  }
+
+  // ---------- Mises à jour ----------
+  let updating = false;
+  function showUpdate(latest) {
+    if (document.getElementById('updbar')) return;
+    const go = h('button', { class: 'btn', text: 'Mettre à jour', 'data-snd': 'none' });
+    const later = h('button', { class: 'btn ghost', text: 'Plus tard', 'data-snd': 'none' });
+    const bar = h('div', { id: 'updbar', class: 'updbar' },
+      h('div', { class: 'upd-t' }, h('b', { text: 'Arcade ' + latest + ' est disponible' }), h('small', { text: 'Ta bibliothèque et tes réglages sont conservés.' })),
+      h('div', { class: 'upd-b' }, later, go));
+    later.addEventListener('click', () => bar.remove());
+    go.addEventListener('click', async () => {
+      if (updating) return;
+      updating = true; go.disabled = true; later.disabled = true; go.textContent = 'Téléchargement…';
+      try { await api.installUpdate(); }
+      catch (e) { updating = false; go.disabled = false; later.disabled = false; go.textContent = 'Mettre à jour'; toast(e.message || String(e), 'error'); }
+    });
+    document.body.append(bar);
+  }
+  async function checkUpdate(manual) {
+    try {
+      const r = await api.checkUpdate();
+      if (r.available) showUpdate(r.latest);
+      else if (manual) toast('Arcade est à jour (version ' + r.current + ').');
+    } catch (e) { if (manual) toast(e.message || String(e), 'error'); }
+  }
+  function updateRow() {
+    return h('div', { class: 'setting' },
+      h('div', { class: 'setting-text' }, h('b', { text: 'Rechercher une mise à jour' }), h('small', { text: 'Version actuelle : ' + APP_VERSION + '. Si une nouvelle version existe, Arcade la télécharge et s\'installe tout seul.' })),
+      h('button', { class: 'btn ghost', text: 'Rechercher', 'data-snd': 'none', onClick: () => checkUpdate(true) }));
   }
 
   function applySound() {
@@ -1013,6 +1044,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.1.0', title: 'Mises à jour automatiques', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.'] },
     { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu, et se rouvre tout seul quand le jeu se ferme.', 'Un clic sur le logo change le mode du menu : automatique, déplié en permanence ou fermé en permanence.', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
@@ -1760,6 +1792,8 @@
       h('div', { class: 'set-group' },
         h('h2', { text: 'Système' }),
         switchRow('Réduire Arcade quand un jeu se lance', 'Arcade se réduit dans la barre des tâches pendant que tu joues, pour ne consommer aucune ressource.', 'minimizeOnLaunch'),
+        switchRow('Vérifier les mises à jour au démarrage', 'Arcade regarde en arrière-plan s\'il existe une nouvelle version et te le propose.', 'checkUpdates'),
+        updateRow(),
         switchRow('Lancer Arcade au démarrage de Windows', 'Arcade s\'ouvre tout seul quand tu allumes ton PC.', 'startWithWindows'),
         switchRow('Garder Arcade dans la zone de notification', 'Quand tu fermes la fenêtre, Arcade reste en arrière-plan (icône près de l\'horloge) : clique dessus pour le rouvrir. Avec le démarrage Windows, il démarre alors discrètement.', 'trayMode', (on) => {
           toast(on ? 'Arcade restera actif dans la zone de notification quand tu fermes la fenêtre.' : 'Arcade se fermera complètement avec sa fenêtre.', 'ok');
@@ -1980,5 +2014,6 @@
     if (st) st.textContent = n ? n + (n > 1 ? ' jeux prêts' : ' jeu prêt') : 'Bienvenue';
     setTimeout(() => Sound.play('start'), 150);
     setTimeout(endSplash, Math.max(0, 2100 - (performance.now() - bootStart)));
+    if (state.settings.checkUpdates !== false) setTimeout(() => checkUpdate(false), 5000);
   }).catch(() => endSplash());
 })();

@@ -63,6 +63,8 @@
     refreshIcon: (id) => call('refreshIcon', { id }),
     fetchCover: (id, opts = {}) => call('fetchCover', { id, ...opts }),
     detectLaunchers: () => call('detectLaunchers'),
+    checkUpdate: () => call('checkUpdate'),
+    installUpdate: () => call('installUpdate'),
     resetAll: () => call('resetAll'),
     scanFolder: async (folder) => (await call('scan', { folder })).items || [],
     setSettings: (patch) => call('settings', patch),

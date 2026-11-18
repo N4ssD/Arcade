@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.0.0";
+const VERSION: &str = "2.1.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -202,7 +202,7 @@ fn default_settings() -> Obj {
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
-        "slideshow": false, "minimizeOnLaunch": true
+        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -267,7 +267,7 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
             }
         }
         "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
-        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" => {
+        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));
             }
@@ -684,7 +684,12 @@ fn launch_target(g: &Obj) -> Result<Launched, String> {
     let ext = p.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
     let dir = p.parent().map(|d| d.to_path_buf()).unwrap_or_default();
     if run_as && (ext == "exe" || ext == "bat" || ext == "cmd") {
-        let ps = format!("Start-Process -FilePath '{}' -Verb RunAs", t.replace('\'', "''"));
+        let q = |s: &str| s.replace('\'', "''");
+        let mut ps = format!("Start-Process -FilePath '{}' -WorkingDirectory '{}'", q(&t), q(&dir.to_string_lossy()));
+        if !args.trim().is_empty() {
+            ps.push_str(&format!(" -ArgumentList '{}'", q(&args)));
+        }
+        ps.push_str(" -Verb RunAs");
         std::process::Command::new("powershell")
             .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
             .creation_flags(CREATE_NO_WINDOW)
@@ -700,6 +705,12 @@ fn launch_target(g: &Obj) -> Result<Launched, String> {
         }
         let child = c.spawn().map_err(|e| e.to_string())?;
         return Ok(Launched { child: Some(child), watch: None });
+    }
+    if (ext == "bat" || ext == "cmd") && !args.trim().is_empty() {
+        let mut c = std::process::Command::new("cmd");
+        c.current_dir(&dir);
+        c.raw_arg(format!("/c start \"\" \"{}\" {}", t, args)).creation_flags(CREATE_NO_WINDOW).spawn().map_err(|e| e.to_string())?;
+        return Ok(Launched { child: None, watch: Some(dir) });
     }
     start_cmd(&t, Some(&dir))?;
     let watch = match ext.as_str() {
@@ -1705,7 +1716,8 @@ async fn setup(name: String, body: Value, app: tauri::AppHandle) -> Result<Value
                     }
                     c.clone()
                 };
-                Ok(json!({ "mode": if installed { "update" } else { "install" }, "version": VERSION, "dir": dir, "oldVersion": old }))
+                let auto = installed && std::env::args().any(|a| a == "--update");
+                Ok(json!({ "mode": if installed { "update" } else { "install" }, "version": VERSION, "dir": dir, "oldVersion": old, "auto": auto }))
             }
             "browse" => {
                 let start = CHOSEN.lock().map(|c| c.clone()).unwrap_or_default();
@@ -2001,6 +2013,87 @@ fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
     }
 }
 
+// ---------- mises à jour ----------
+
+const REPO: &str = "N4ssD/Arcade";
+
+fn parse_cargo_version(t: &str) -> Option<String> {
+    for l in t.lines() {
+        if let Some(rest) = l.trim().strip_prefix("version") {
+            if let Some(v) = rest.trim_start().strip_prefix('=') {
+                let v = v.trim().trim_matches('"').trim();
+                if !v.is_empty() {
+                    return Some(v.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn ver_parts(v: &str) -> Vec<u64> {
+    v.split('.').map(|p| p.trim().parse::<u64>().unwrap_or(0)).collect()
+}
+
+fn ver_newer(latest: &str, current: &str) -> bool {
+    let (a, b) = (ver_parts(latest), ver_parts(current));
+    for i in 0..a.len().max(b.len()) {
+        let (x, y) = (a.get(i).copied().unwrap_or(0), b.get(i).copied().unwrap_or(0));
+        if x != y {
+            return x > y;
+        }
+    }
+    false
+}
+
+async fn check_update_cmd() -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let url = format!("https://raw.githubusercontent.com/{}/main/src-tauri/Cargo.toml", REPO);
+        let body = http_get(&url, 8).map_err(|_| "Impossible de joindre GitHub. Vérifie ta connexion.".to_string())?;
+        let latest = parse_cargo_version(&String::from_utf8_lossy(&body)).ok_or_else(|| "Version distante illisible.".to_string())?;
+        Ok(json!({ "ok": true, "current": VERSION, "latest": latest, "available": ver_newer(&latest, VERSION) }))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+// Télécharge le nouvel ArcadeSetup.exe, le lance en mode « mise à jour automatique » puis ferme Arcade
+async fn install_update_cmd(app: &tauri::AppHandle, dir: &Path) -> Result<Value, String> {
+    let d = dir.to_path_buf();
+    let exe = tauri::async_runtime::spawn_blocking(move || -> Result<PathBuf, String> {
+        let url = format!("https://github.com/{}/releases/download/dernier/ArcadeSetup.exe", REPO);
+        let r = ureq::get(&url).timeout(std::time::Duration::from_secs(180)).call().map_err(|_| "Téléchargement impossible. Vérifie ta connexion.".to_string())?;
+        let mut buf = Vec::new();
+        r.into_reader().take(200_000_000).read_to_end(&mut buf).map_err(|e| e.to_string())?;
+        if buf.len() < 1_000_000 || &buf[..2] != b"MZ" {
+            return Err("Le fichier téléchargé est invalide.".into());
+        }
+        let tmp = std::env::temp_dir().join("ArcadeUpdate");
+        let _ = fs::create_dir_all(&tmp);
+        let exe = tmp.join("ArcadeSetup.exe");
+        fs::write(&exe, &buf).map_err(|e| format!("Écriture impossible : {}", e))?;
+        log(&d, &format!("Mise à jour téléchargée ({} Mo)", buf.len() / 1_000_000));
+        Ok(exe)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    #[cfg(windows)]
+    {
+        std::process::Command::new(&exe).arg("--update").current_dir(exe.parent().unwrap_or(Path::new("."))).spawn().map_err(|e| e.to_string())?;
+        let h = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            h.exit(0);
+        });
+        Ok(json!({ "ok": true }))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (&exe, app);
+        Err("Les mises à jour ne sont disponibles que sous Windows.".into())
+    }
+}
+
 // ---------- zone de notification ----------
 
 fn show_main(app: &tauri::AppHandle) {
@@ -2063,6 +2156,12 @@ fn tray_mode(app: &tauri::AppHandle) -> bool {
 
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
+    if name == "checkUpdate" {
+        return check_update_cmd().await;
+    }
+    if name == "installUpdate" {
+        return install_update_cmd(&app, &state.dir).await;
+    }
     if name == "fetchCover" {
         return fetch_cover_cmd(&state, &body).await;
     }

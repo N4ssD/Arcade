@@ -138,6 +138,7 @@ h1 { margin: 0; font-family: "Silkscreen", monospace; font-weight: 700; font-siz
 
   api('info').then((i) => {
     info = i;
+    if (i.auto) { const r = $('o-run'); if (r) r.checked = true; setTimeout(() => { if (!working) run(); }, 350); }
     $('ver').textContent = 'Version ' + i.version;
     $('path').textContent = i.dir;
     if (i.mode === 'update') {
@@ -173,6 +174,7 @@ h1 { margin: 0; font-family: "Silkscreen", monospace; font-weight: 700; font-siz
     $('b-end').textContent = run ? 'Lancer Arcade' : 'Fermer';
     $('done-p').textContent = run ? 'Tout est prêt. Bon jeu !' : 'Tu peux le retrouver avec son raccourci.';
     show('v-done');
+    if (info.auto) setTimeout(() => { const b = $('b-end'); if (b && !b.disabled) b.click(); }, 700);
   }
   $('b-go').onclick = run;
   $('b-retry').onclick = run;
