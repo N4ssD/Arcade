@@ -1,0 +1,12 @@
+# Fichiers générés par la compilation
+dist/
+installer/app/
+installer/*.syso
+*.exe
+*.zip
+
+# Éditeurs / système
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
