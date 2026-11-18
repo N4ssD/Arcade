@@ -30,4 +30,5 @@ jobs:
         run: |
           gh release delete rust-latest --yes --cleanup-tag || true
           gh release delete dernier --yes --cleanup-tag || true
-          gh release create dernier ArcadeSetup.exe --prerelease --title "Arcade (latest build)" --notes "Download ArcadeSetup.exe, run it and choose where to install. Windows 10 or 11, 64-bit. See the README for details."
+          VER=$(grep -m1 '^version' src-tauri/Cargo.toml | cut -d'"' -f2)
+          gh release create dernier ArcadeSetup.exe --prerelease --title "Arcade $VER (latest build)" --notes "Download ArcadeSetup.exe, run it and choose where to install. Windows 10 or 11, 64-bit. See the README for details."

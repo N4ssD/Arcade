@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.6 — Dot separators and update check
+- Collapsed menu: the separator lines are replaced by three small dots, centered between the icon groups.
+- Updates: Arcade now compares with the version of the build that is actually published, so it no longer offers an update that is still compiling.
+
 ## 2.3.5 — Separators recentered
 - Collapsed menu: both separators now sit exactly halfway between the icons, and follow automatically when categories are added or removed.
 

@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.3.5";
+const VERSION: &str = "2.3.6";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -2182,9 +2182,23 @@ fn ver_newer(latest: &str, current: &str) -> bool {
 
 async fn check_update_cmd() -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(|| {
-        let url = format!("https://raw.githubusercontent.com/{}/main/src-tauri/Cargo.toml", REPO);
-        let body = http_get(&url, 8).map_err(|_| "Impossible de joindre GitHub. Vérifie ta connexion.".to_string())?;
-        let latest = parse_cargo_version(&String::from_utf8_lossy(&body)).ok_or_else(|| "Version distante illisible.".to_string())?;
+        // Source de vérité : la version de l'exe réellement publié (titre de la release « dernier »), pas le code sur main
+        // (main peut être en avance pendant que la compilation tourne). Repli : Cargo.toml.
+        let from_release = (|| -> Option<String> {
+            let url = format!("https://api.github.com/repos/{}/releases/tags/dernier", REPO);
+            let r = ureq::get(&url).set("User-Agent", "Arcade-updater").timeout(std::time::Duration::from_secs(8)).call().ok()?;
+            let v: Value = serde_json::from_reader(r.into_reader().take(2_000_000)).ok()?;
+            let name = v.get("name")?.as_str()?.to_string();
+            name.split_whitespace().find(|w| w.chars().next().map_or(false, |c| c.is_ascii_digit()) && w.contains('.')).map(|w| w.to_string())
+        })();
+        let latest = match from_release {
+            Some(v) => v,
+            None => {
+                let url = format!("https://raw.githubusercontent.com/{}/main/src-tauri/Cargo.toml", REPO);
+                let body = http_get(&url, 8).map_err(|_| "Impossible de joindre GitHub. Vérifie ta connexion.".to_string())?;
+                parse_cargo_version(&String::from_utf8_lossy(&body)).ok_or_else(|| "Version distante illisible.".to_string())?
+            }
+        };
         Ok(json!({ "ok": true, "current": VERSION, "latest": latest, "available": ver_newer(&latest, VERSION) }))
     })
     .await
