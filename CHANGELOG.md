@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.3 — Smaller modules
+- Library commands moved out of the covers module into their own one.
+
 ## 2.8.2 — Build fix
 - Finishing touch on the engine split into modules.
 

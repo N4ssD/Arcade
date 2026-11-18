@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-pub(crate) const VERSION: &str = "2.8.2";
+pub(crate) const VERSION: &str = "2.8.3";
 pub(crate) const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 pub(crate) const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -58,6 +58,7 @@ mod inst;
 mod covers;
 mod dialogs;
 mod dragdrop;
+mod handlers;
 mod launch;
 mod perf;
 mod session;
@@ -70,6 +71,7 @@ mod util;
 pub(crate) use covers::*;
 pub(crate) use dialogs::*;
 pub(crate) use dragdrop::*;
+pub(crate) use handlers::*;
 pub(crate) use launch::*;
 pub(crate) use perf::*;
 pub(crate) use session::*;
