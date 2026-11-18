@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.11.1', title: 'Pendant que tu joues', items: ['Au lancement d\'un jeu, la musique se coupe et Arcade se cache du bureau : il reste dans la zone de notification, un clic sur son icône le rouvre.', 'Arcade se rouvre tout seul à la fermeture du jeu et la musique reprend.'] },
   { v: '2.11.0', title: 'Curseur en pixels', items: ['Nouveau : un curseur en pixels (flèche + main au survol des boutons et des jeux) à ta couleur d\'accent. Il ne s\'applique que dans la fenêtre d\'Arcade.', 'Paramètres > Apparence > « Curseur en pixels » pour le désactiver.'] },
   { v: '2.10.1', title: 'Musique plus rapide', items: ['La musique d\'ambiance démarre dès la fin du chargement, sans attendre un clic, et monte plus vite.'] },
   { v: '2.10.0', title: 'Musique d\'ambiance et fiabilité', items: ['Nouveau : une douce musique d\'ambiance de fond, générée en direct. Paramètres > Sons : interrupteur et volume séparés. Elle se met en pause quand Arcade est réduit.', 'Ajout de jeux : plus de faux message « déjà dans ta bibliothèque » après un double clic ou un dépôt envoyé deux fois par Windows.', 'Les messages d\'erreur restent 12 secondes (clique pour les fermer) et sont écrits dans data\\arcade.log.', 'Icônes : les jeux sans icône sont retentés à chaque lancement d\'Arcade.'] },

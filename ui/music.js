@@ -4,7 +4,7 @@ const Music = (() => {
   const CHORDS = [[45, 52, 57, 60, 64], [41, 48, 53, 57, 60], [48, 52, 55, 59, 64], [43, 50, 55, 59, 62]]; // Am9, Fmaj7, Cmaj7, G6
   const BELLS = [69, 72, 74, 76, 79, 81];
   const CHORD_LEN = 8;
-  let ctx = null, out = null, echo = null, timer = 0, nextAt = 0, idx = 0, wanted = false, vol = 20, gesture = true; // le moteur autorise la lecture sans clic ; sinon elle démarre au premier clic
+  let ctx = null, out = null, echo = null, timer = 0, nextAt = 0, idx = 0, wanted = false, vol = 20, held = false, armed = false, sawRun = false, gesture = true; // le moteur autorise la lecture sans clic ; sinon elle démarre au premier clic
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
   function build() {
@@ -56,7 +56,7 @@ const Music = (() => {
     }
   }
   function sync() {
-    const run = wanted && gesture && !document.hidden && vol > 0;
+    const run = wanted && gesture && !document.hidden && vol > 0 && !held;
     try {
       if (run) {
         if (!ctx && !build()) return;
@@ -77,10 +77,19 @@ const Music = (() => {
     if (typeof c.vol === 'number') vol = c.vol;
     sync();
   }
+  // Un jeu se lance : la musique se coupe jusqu'à ce que le jeu se ferme ou qu'Arcade revienne au premier plan
+  function hold(on) { held = on; armed = false; sawRun = false; sync(); }
+  function release(runningCount) {
+    if (!held) return;
+    if (runningCount > 0) sawRun = true;
+    else if (sawRun) { held = false; sync(); }
+  }
+  window.addEventListener('blur', () => { if (held) armed = true; });
+  window.addEventListener('focus', () => { if (held && armed) { held = false; sync(); } });
   // L'audio ne démarre qu'après une interaction (règle du navigateur)
   const wake = () => { gesture = true; try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch {} sync(); };
   window.addEventListener('pointerdown', wake, { once: true, capture: true });
   window.addEventListener('keydown', wake, { once: true, capture: true });
-  document.addEventListener('visibilitychange', sync);
-  return { configure };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (held) armed = true; } else if (held && armed) held = false; sync(); });
+  return { configure, hold, release };
 })();

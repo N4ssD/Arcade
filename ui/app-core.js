@@ -3,7 +3,7 @@
 'use strict';
 
 const api = window.arcade;
-const APP_VERSION = '2.11.0';
+const APP_VERSION = '2.11.1';
 
 // Toute erreur du serveur est affichée (plus d'échec silencieux)
 window.addEventListener('unhandledrejection', (e) => {
@@ -235,6 +235,7 @@ async function load() {
   state.categories = lib.categories || [];
   state.daily = lib.daily || {};
   state.running = new Set(lib.running);
+  Music.release(state.running.size);
   if (typeof avRunWatch === 'function') avRunWatch();
   state.installed = !!lib.installed;
   setTimeout(applyIdle, 0);

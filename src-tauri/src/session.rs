@@ -40,10 +40,19 @@ pub(crate) async fn launch_cmd(state: &tauri::State<'_, App>, app: &tauri::AppHa
                 }
             }
             if minimize {
-                // Arcade se réduit pendant que tu joues : l'interface ne consomme plus rien
-                if let Some(w) = app.get_webview_window("main") {
-                    let _ = w.minimize();
-                }
+                // Arcade se cache du bureau pendant que tu joues (il reste dans la zone de notification) : l'interface ne consomme plus rien
+                let h = app.clone();
+                let _ = app.run_on_main_thread(move || {
+                    let hidden = match build_tray(&h) {
+                        Ok(_) => h.get_webview_window("main").map(|w| w.hide().is_ok()).unwrap_or(false),
+                        Err(_) => false,
+                    };
+                    if !hidden {
+                        if let Some(w) = h.get_webview_window("main") {
+                            let _ = w.minimize();
+                        }
+                    }
+                });
             }
             Ok(json!({ "ok": true }))
         }
@@ -179,6 +188,10 @@ pub(crate) fn tick(app: &tauri::AppHandle, sys: &mut sysinfo::System) {
         let hidden = app.get_webview_window("main").map(|w| w.is_minimized().unwrap_or(false) || !w.is_visible().unwrap_or(true)).unwrap_or(false);
         if hidden {
             show_main(app);
+            // l'icône de la zone de notification n'était là que pour la durée de la partie (sauf si tu l'as activée dans les réglages)
+            if !tray_mode(app) {
+                sync_tray(app, false);
+            }
         }
     }
 }

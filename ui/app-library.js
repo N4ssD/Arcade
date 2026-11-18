@@ -89,7 +89,7 @@ async function pumpCovers() {
       if (r.offline) state.queue.length = 0; // pas de connexion : on réessaiera au prochain démarrage
     } catch {}
     state.fetching.delete(id);
-    try { const lib = await api.getLibrary(); state.games = lib.games; state.categories = lib.categories || state.categories; state.running = new Set(lib.running); } catch {}
+    try { const lib = await api.getLibrary(); state.games = lib.games; state.categories = lib.categories || state.categories; state.running = new Set(lib.running); Music.release(state.running.size); } catch {}
     render();
   }
   pumping = false;

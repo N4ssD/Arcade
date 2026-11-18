@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.11.1 — While you play
+- When a game launches, the music stops and Arcade hides from the desktop: it stays in the notification area, one click on its icon reopens it.
+- Arcade reopens by itself when the game closes and the music resumes.
+
 ## 2.11.0 — Pixel cursor
 - New pixel cursor (arrow + hand over buttons and games) in your accent color, inside the Arcade window only.
 - Settings > Appearance > "Pixel cursor" turns it off.

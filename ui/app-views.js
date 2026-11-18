@@ -115,7 +115,7 @@ async function refreshStats(manual) {
   if (btn) btn.classList.add('spin');
   try {
     const lib = await api.getLibrary();
-    state.games = lib.games; state.daily = lib.daily || {}; state.running = new Set(lib.running);
+    state.games = lib.games; state.daily = lib.daily || {}; state.running = new Set(lib.running); Music.release(state.running.size);
     statsUpdated = Date.now();
     evalAchievements();
     if (state.view === 'stats') renderStats();
@@ -307,6 +307,7 @@ async function launch(g) {
   const r = await api.launch(g.id);
   if (!r.ok) return toast(r.error || 'Impossible de lancer ce jeu.', 'error');
   Sound.play('launch');
+  Music.hold(true);
   { const hr = new Date().getHours(); if (hr >= 22 || hr < 5) bump('nightLaunch'); else if (hr >= 5 && hr < 9) bump('morningLaunch'); }
   toast(`${g.name} se lance…`, 'ok');
   await load();
