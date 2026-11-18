@@ -2122,8 +2122,13 @@ fn main() {
     let installer = false;
 
     let dir = data_dir();
-    let _ = fs::create_dir_all(&dir);
-    let db = load(&dir);
+    // l'installeur n'a besoin ni du dossier de données ni de la bibliothèque : ouverture plus rapide
+    let db = if installer {
+        Db { games: vec![], categories: vec![], settings: default_settings(), daily: Obj::new() }
+    } else {
+        let _ = fs::create_dir_all(&dir);
+        load(&dir)
+    };
     let db_tray = db.settings.get("trayMode").and_then(|x| x.as_bool()).unwrap_or(false);
     {
         let d = dir.clone();

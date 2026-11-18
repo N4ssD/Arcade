@@ -28,7 +28,7 @@ body { background: var(--bg); color: var(--text); font-family: "Outfit", system-
 .p { position: absolute; background: #C9B8F8; opacity: 0; animation: blink 1.3s steps(2, end) var(--d) infinite; }
 @keyframes blink { 0% { opacity: 0; } 50% { opacity: .9; } 100% { opacity: 0; } }
 /* carte */
-.card { position: relative; width: min(600px, calc(100vw - 48px)); padding: 34px 36px 30px; border-radius: 24px; background: rgba(30,30,40,.86); border: 1px solid var(--line); box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.03) inset; backdrop-filter: blur(14px); animation: cin .6s var(--ease) both; }
+.card { position: relative; width: min(600px, calc(100vw - 48px)); padding: 34px 36px 30px; border-radius: 24px; background: rgba(30,30,40,.86); border: 1px solid var(--line); box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.03) inset;  animation: cin .25s var(--ease) both; }
 @keyframes cin { from { opacity: 0; transform: translateY(16px) scale(.985); } }
 .head { display: flex; align-items: center; gap: 18px; }
 .logo { width: 64px; height: 64px; border-radius: 16px; flex: none; box-shadow: 0 14px 40px -8px rgba(122,89,211,.8); }
@@ -59,7 +59,7 @@ h1 { margin: 0; font-family: "Silkscreen", monospace; font-weight: 700; font-siz
 .foot { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
 [hidden] { display: none !important; }
 .view { display: none; }
-.view.on { display: block; animation: cin .45s var(--ease) both; }
+.view.on { display: block; animation: cin .2s var(--ease) both; }
 /* progression */
 .bar { height: 10px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; margin: 26px 0 14px; }
 .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #BBA3FF, #7A59D3); box-shadow: 0 0 16px rgba(156,124,240,.9); transition: width .45s steps(12, end); }
