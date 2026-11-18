@@ -4,7 +4,7 @@ const Music = (() => {
   const CHORDS = [[45, 52, 57, 60, 64], [41, 48, 53, 57, 60], [48, 52, 55, 59, 64], [43, 50, 55, 59, 62]]; // Am9, Fmaj7, Cmaj7, G6
   const BELLS = [69, 72, 74, 76, 79, 81];
   const CHORD_LEN = 8;
-  let ctx = null, out = null, echo = null, timer = 0, nextAt = 0, idx = 0, wanted = false, vol = 20, gesture = false;
+  let ctx = null, out = null, echo = null, timer = 0, nextAt = 0, idx = 0, wanted = false, vol = 20, gesture = true; // le moteur autorise la lecture sans clic ; sinon elle démarre au premier clic
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
   function build() {
@@ -28,7 +28,7 @@ const Music = (() => {
       const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 650;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.028, t + 2.6);
+      g.gain.linearRampToValueAtTime(0.028, t + 1.4);
       g.gain.setValueAtTime(0.028, t + len - 3);
       g.gain.linearRampToValueAtTime(0.0001, t + len);
       o.connect(f); f.connect(g); g.connect(out); g.connect(echo);
@@ -51,7 +51,7 @@ const Music = (() => {
       const ch = CHORDS[idx % CHORDS.length]; idx++;
       ch.forEach((m, i) => pad(m, nextAt + i * 0.12, CHORD_LEN + 3));
       const n = 2 + Math.floor(Math.random() * 2);
-      for (let k = 0; k < n; k++) bell(BELLS[Math.floor(Math.random() * BELLS.length)], nextAt + 1 + k * 2 + Math.random() * 1.2);
+      for (let k = 0; k < n; k++) bell(BELLS[Math.floor(Math.random() * BELLS.length)], nextAt + 0.6 + k * 2 + Math.random() * 1.2);
       nextAt += CHORD_LEN;
     }
   }
@@ -62,7 +62,7 @@ const Music = (() => {
         if (!ctx && !build()) return;
         if (ctx.state === 'suspended') ctx.resume();
         out.gain.cancelScheduledValues(ctx.currentTime);
-        out.gain.setTargetAtTime(level(), ctx.currentTime, 1.2);
+        out.gain.setTargetAtTime(level(), ctx.currentTime, 0.6);
         if (!timer) { nextAt = ctx.currentTime + 0.2; timer = setInterval(tick, 600); setTimeout(tick, 100); }
       } else if (ctx) {
         out.gain.cancelScheduledValues(ctx.currentTime);
@@ -78,7 +78,7 @@ const Music = (() => {
     sync();
   }
   // L'audio ne démarre qu'après une interaction (règle du navigateur)
-  const wake = () => { gesture = true; sync(); };
+  const wake = () => { gesture = true; try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch {} sync(); };
   window.addEventListener('pointerdown', wake, { once: true, capture: true });
   window.addEventListener('keydown', wake, { once: true, capture: true });
   document.addEventListener('visibilitychange', sync);

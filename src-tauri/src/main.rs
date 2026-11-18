@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-pub(crate) const VERSION: &str = "2.10.0";
+pub(crate) const VERSION: &str = "2.10.1";
 pub(crate) const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 pub(crate) const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -366,14 +366,17 @@ fn main() {
                         tick(&h, &mut sys);
                     }
                 });
-                tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+                let win = tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
                     .title("Arcade")
                     .inner_size(1280.0, 820.0)
                     .min_inner_size(900.0, 600.0)
                     .background_color(tauri::window::Color(18, 18, 24, 255))
                     .center()
-                    .visible(!start_hidden)
-                    .build()?;
+                    .visible(!start_hidden);
+                // La musique d'ambiance démarre toute seule (sans attendre un clic)
+                #[cfg(windows)]
+                let win = win.additional_browser_args("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required");
+                win.build()?;
                 if db_tray {
                     match build_tray(app.handle()) {
                         Ok(_) => log(&app.state::<App>().dir, "Zone de notification : icône créée"),

@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.10.1 — Faster music start
+- The ambient music starts as soon as loading ends, without waiting for a click, and fades in faster.
+
 ## 2.10.0 — Ambient music and reliability
 - New soft ambient background music, generated live. Settings > Sounds: on/off switch and its own volume. Pauses when Arcade is minimized.
 - Adding games: no more false "already in your library" message after a double click or a drop event sent twice by Windows.

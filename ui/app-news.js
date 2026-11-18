@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.10.1', title: 'Musique plus rapide', items: ['La musique d\'ambiance démarre dès la fin du chargement, sans attendre un clic, et monte plus vite.'] },
   { v: '2.10.0', title: 'Musique d\'ambiance et fiabilité', items: ['Nouveau : une douce musique d\'ambiance de fond, générée en direct. Paramètres > Sons : interrupteur et volume séparés. Elle se met en pause quand Arcade est réduit.', 'Ajout de jeux : plus de faux message « déjà dans ta bibliothèque » après un double clic ou un dépôt envoyé deux fois par Windows.', 'Les messages d\'erreur restent 12 secondes (clique pour les fermer) et sont écrits dans data\\arcade.log.', 'Icônes : les jeux sans icône sont retentés à chaque lancement d\'Arcade.'] },
   { v: '2.9.0', title: 'L\'icône suit ta couleur', items: ['L\'icône d\'Arcade dans la barre des tâches et dans la zone de notification prend maintenant la couleur d\'accent (ou la couleur du logo si tu en as choisi une).', 'Limite de Windows : si Arcade est épinglé dans la barre des tâches, l\'icône épinglée garde sa couleur d\'origine ; seule l\'icône de la fenêtre ouverte change.'] },
   { v: '2.8.3', title: 'Moteur : modules plus petits', items: ['Les commandes de la bibliothèque sont séparées des couvertures dans leur propre module.'] },
