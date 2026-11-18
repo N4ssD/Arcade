@@ -50,8 +50,8 @@
   }
 
   // view : full | head | top | bottom | shoes
-  function svg(a, view, size) {
-    a = sanitize(a);
+  function svg(a, view, size, over) {
+    a = Object.assign(sanitize(a), over || {}); // over : tenue ou humeur temporaire (valeurs internes, jamais saisies par l'utilisateur)
     const g = [];
     const R = (x, y, w, h, c) => g.push('<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>');
     const sk = a.skin, hr = a.hair, tp = a.topC, bt = a.bottomC, sc = a.shoesC;
@@ -75,6 +75,8 @@
     if (a.top === 'jacket') { R(7, 11, 2, 7, '#f0f0f6'); R(3, 17, 10, 1, shade(tp, -30)); }
     if (a.top === 'star') { [[5, 13], [10, 15], [8, 17], [4, 16], [10, 12]].forEach(([x, y]) => R(x, y, 1, 1, '#ffd166')); }
     if (a.top === 'tee') { R(7, 13, 2, 3, shade(tp, 60)); R(6, 14, 4, 1, shade(tp, 60)); }
+    if (a.top === 'pajama') { R(3, 13, 10, 1, shade(tp, 40)); R(3, 16, 10, 1, shade(tp, 40)); R(5, 12, 1, 1, '#ffd166'); R(10, 14, 1, 1, '#ffd166'); R(7, 17, 1, 1, '#ffd166'); }
+    if (a.top === 'pumpkin') { R(5, 13, 1, 1, '#14141c'); R(10, 13, 1, 1, '#14141c'); R(6, 15, 4, 1, '#14141c'); R(5, 14, 1, 1, '#14141c'); R(10, 14, 1, 1, '#14141c'); }
     if (a.top === 'medal') { R(7, 13, 2, 3, '#ffd166'); R(6, 14, 4, 1, '#ffd166'); R(7, 14, 2, 1, '#fff2c0'); }
     // bras et mains
     R(2, 12, 1, 5, tp); R(13, 12, 1, 5, shade(tp, -28)); R(2, 17, 1, 2, sk); R(13, 17, 1, 2, shade(sk, -25));
@@ -82,7 +84,11 @@
     R(7, 10, 2, 2, shade(sk, -22)); R(4, 3, 8, 8, sk); R(11, 4, 1, 6, shade(sk, -18));
     R(5, 8, 1, 1, 'rgba(255,120,140,.45)'); R(10, 8, 1, 1, 'rgba(255,120,140,.45)');
     const mouth = shade(sk, -75);
-    if (a.face === 'f1') { R(5, 7, 2, 1, NS); R(9, 7, 2, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); }
+    const mood = a.mood;
+    if (mood === 'sleep') { R(5, 7, 2, 1, NS); R(9, 7, 2, 1, NS); R(7, 9, 2, 1, mouth); }
+    else if (mood === 'happy') { R(5, 7, 1, 1, NS); R(6, 6, 1, 1, NS); R(7, 7, 1, 1, NS); R(9, 7, 1, 1, NS); R(10, 6, 1, 1, NS); R(11, 7, 1, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); R(7, 10, 2, 1, '#c4636b'); }
+    else if (mood === 'impatient') { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 5, 2, 1, hr); R(9, 5, 2, 1, hr); R(6, 9, 4, 1, mouth); R(13, 5, 1, 2, '#8fd0ff'); }
+    else if (a.face === 'f1') { R(5, 7, 2, 1, NS); R(9, 7, 2, 1, NS); R(6, 9, 4, 1, mouth); R(5, 8, 1, 1, mouth); R(10, 8, 1, 1, mouth); }
     else if (a.face === 'f2') { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 5, 2, 1, shade(hr, 0)); R(9, 5, 2, 1, shade(hr, 0)); R(7, 9, 2, 1, mouth); }
     else if (a.face === 'f3') { R(5, 6, 2, 2, '#fff'); R(9, 6, 2, 2, '#fff'); R(6, 7, 1, 1, NS); R(10, 7, 1, 1, NS); R(7, 9, 2, 2, '#7a3b45'); }
     else { R(5, 6, 1, 2, NS); R(10, 6, 1, 2, NS); R(5, 6, 1, 1, '#fff'); R(10, 6, 1, 1, '#fff'); R(7, 9, 2, 1, mouth); }
@@ -95,8 +101,12 @@
     if (a.acc === 'phones') { R(2, 5, 2, 4, '#2b2b3a'); R(12, 5, 2, 4, '#2b2b3a'); R(3, 1, 10, 1, '#2b2b3a'); R(2, 6, 1, 2, '#9C7CF0'); R(13, 6, 1, 2, '#9C7CF0'); R(2, 4, 1, 1, '#2b2b3a'); R(13, 4, 1, 1, '#2b2b3a'); }
     if (a.acc === 'glasses') { R(4, 6, 4, 3, NS); R(8, 6, 4, 3, NS); R(5, 7, 2, 1, '#8fd0ff'); R(9, 7, 2, 1, '#8fd0ff'); }
     if (a.acc === 'cap') { R(3, 1, 10, 3, '#E8663D'); R(3, 4, 10, 1, '#b8472a'); R(11, 3, 4, 1, '#b8472a'); R(6, 2, 3, 1, '#fff'); }
+    if (a.acc === 'nightcap') { R(4, 1, 8, 2, '#4a5fd0'); R(3, 3, 10, 1, '#ECECF1'); R(5, 0, 6, 1, '#4a5fd0'); R(11, -1, 3, 2, '#4a5fd0'); R(13, -1, 2, 2, '#ECECF1'); }
+    if (a.acc === 'shades') { R(4, 6, 4, 2, NS); R(8, 6, 4, 2, NS); R(7, 6, 2, 1, NS); R(5, 6, 1, 1, '#5b5b78'); R(9, 6, 1, 1, '#5b5b78'); }
+    if (a.acc === 'beanie') { R(3, 1, 10, 3, '#d94f7a'); R(3, 3, 10, 1, '#ECECF1'); R(7, -1, 2, 2, '#ECECF1'); R(5, 1, 1, 2, '#e8739a'); R(8, 1, 1, 2, '#e8739a'); }
+    if (a.acc === 'witch') { R(2, 2, 12, 1, '#2a1a3a'); R(4, 0, 8, 2, '#3a2450'); R(6, -2, 4, 2, '#3a2450'); R(7, -4, 2, 2, '#3a2450'); R(4, 1, 8, 1, '#E8663D'); }
     if (a.acc === 'crown') { R(4, -1, 8, 2, '#ffd166'); R(4, -2, 1, 1, '#ffd166'); R(7, -3, 2, 2, '#ffd166'); R(11, -2, 1, 1, '#ffd166'); }
-    const VB = { full: [0, -3, 16, 28], head: [2, -3, 12, 14], face: [3, 0, 10, 10], top: [1, 9, 14, 11], bottom: [3, 17, 10, 8], shoes: [3, 20, 10, 5] }[view || 'full'] || [0, -3, 16, 28];
+    const VB = { full: [0, -5, 16, 30], head: [2, -3, 12, 14], face: [3, 0, 10, 10], top: [1, 9, 14, 11], bottom: [3, 17, 10, 8], shoes: [3, 20, 10, 5] }[view || 'full'] || [0, -5, 16, 30];
     const w = size || 100, hgt = Math.round(w * VB[3] / VB[2]);
     return '<svg width="' + w + '" height="' + hgt + '" style="width:' + w + 'px;height:' + hgt + 'px;stroke:none" viewBox="' + VB.join(' ') + '" shape-rendering="crispEdges" aria-hidden="true">' + g.join('') + '</svg>';
   }

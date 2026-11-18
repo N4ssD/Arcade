@@ -953,6 +953,20 @@ body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: tra
 @media (max-width: 1000px) { .av-lvl { display: none; } }
 @media (max-width: 800px) { .av-coins { display: none; } }
 
+/* Humeurs de l'avatar */
+.av-z { position: absolute; z-index: 2; font-family: var(--font-px); font-style: normal; font-size: 12px; color: var(--accent-2, #C9B8FF); opacity: 0; pointer-events: none; }
+.av-z.z1 { right: 8px; top: 18px; }
+.av-z.z2 { right: 0; top: 8px; font-size: 14px; }
+.av-strip:not(.still) .mood-sleep > span { animation: avBreath 3s ease-in-out infinite; transform-origin: 50% 100%; }
+.av-strip:not(.still) .mood-sleep .av-z { animation: avZ 2.6s ease-in-out infinite; }
+.av-strip:not(.still) .mood-sleep .av-z.z2 { animation-delay: 1.2s; }
+.av-strip:not(.still) .mood-happy > span { animation: avHop 1.1s ease-in-out infinite; }
+.av-strip:not(.still) .mood-impatient > span { animation: avTap .5s steps(2, end) infinite; transform-origin: 50% 100%; }
+@keyframes avBreath { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.97); } }
+@keyframes avZ { 0% { opacity: 0; transform: translate(0, 6px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -14px); } }
+@keyframes avHop { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+@keyframes avTap { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+
 .av-modal { width: min(1040px, 95vw); height: min(680px, 90vh); }
 .av-mh { display: flex; align-items: center; gap: 14px; padding: 18px 22px 8px; }
 .av-mh h3 { margin: 0; }

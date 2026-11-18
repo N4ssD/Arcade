@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.0 — Living avatar and 30 % volume
+- The avatar reacts: it falls asleep when you are idle, is happy when you launch a game (and when you come back), gets impatient if you linger in the menus.
+- Automatic outfits: pajamas at night, sunglasses in the afternoon, a beanie in winter, a witch costume at Halloween (can be turned off in Settings > Appearance).
+- The default volume is now 30 % everywhere (applied once, including existing installs; change it in Settings > Sound).
+
 ## 2.4.2 — Avatar strip
 - The avatar moves into a slim strip under the search bar (character, speech bubble, coins, level, Customize button), so the library keeps its full width.
 - The cross hides the strip; the "My avatar" menu entry brings it back.

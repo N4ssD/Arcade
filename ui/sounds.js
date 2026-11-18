@@ -3,7 +3,7 @@
 const Sound = (() => {
   'use strict';
   let ctx = null, master = null, reverb = null, noiseBuf = null;
-  const cfg = { enabled: true, volume: 0.6, hover: true, click: true };
+  const cfg = { enabled: true, volume: 0.3, hover: true, click: true };
   let lastHover = 0;
 
   function ensure() {

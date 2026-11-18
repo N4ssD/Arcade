@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "2.4.2";
+const VERSION: &str = "2.5.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -198,12 +198,12 @@ fn copy_dir(src: &Path, dst: &Path) {
 
 fn default_settings() -> Obj {
     let v = json!({
-        "cardSize": 200, "volume": 60, "sounds": true, "hoverSounds": true, "clickSounds": true,
+        "cardSize": 200, "volume": 30, "volumeV": 0, "sounds": true, "hoverSounds": true, "clickSounds": true,
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
         "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false,
-        "avatarOn": true, "avatarPanel": true, "avatar": {}
+        "avatarOn": true, "avatarPanel": true, "avatarAuto": true, "avatar": {}
     });
     v.as_object().cloned().unwrap_or_default()
 }
@@ -225,6 +225,11 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
         "volume" => {
             if let Some(n) = v.as_i64() {
                 settings.insert(k.into(), json!(n.clamp(0, 100)));
+            }
+        }
+        "volumeV" => {
+            if let Some(n) = v.as_i64() {
+                settings.insert(k.into(), json!(n.clamp(0, 10)));
             }
         }
         "breakReminder" => {
@@ -295,7 +300,7 @@ fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
             }
         }
         "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
-        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" | "avatarOn" | "avatarPanel" => {
+        | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" | "avatarOn" | "avatarPanel" | "avatarAuto" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));
             }

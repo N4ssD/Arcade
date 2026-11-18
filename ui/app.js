@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.4.2';
+  const APP_VERSION = '2.5.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -18,7 +18,7 @@
     view: 'all', // all | fav | recent | cat:<nom>
     query: '',
     sort: 'name',
-    settings: { cardSize: 200, volume: 60, sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
+    settings: { cardSize: 200, volume: 30, sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
     fetching: new Set(), // jeux dont la couverture est en cours de recherche
     attempted: new Set(), // évite de relancer une recherche en boucle
     queue: [],
@@ -222,9 +222,12 @@
     state.categories = lib.categories || [];
     state.daily = lib.daily || {};
     state.running = new Set(lib.running);
+    if (typeof avRunWatch === 'function') avRunWatch();
     state.installed = !!lib.installed;
     setTimeout(applyIdle, 0);
     state.settings = { ...state.settings, ...lib.settings };
+    // Une seule fois : le volume par défaut passe à 30 % (aussi pour les installations existantes)
+    if (state.settings.volumeV !== 1) { state.settings.volume = 30; state.settings.volumeV = 1; api.setSettings({ volume: 30, volumeV: 1 }).catch(() => {}); }
     checkVersion(lib.version);
     applyCardSize(state.settings.cardSize);
     $('#size').value = state.settings.cardSize;
@@ -963,7 +966,7 @@
     el.scrollTop = keepScroll;
   }
 
-  function setView(v) { detailId = null; document.getElementById('detail')?.remove(); state.view = v; render(); }
+  function setView(v) { mood.navCount++; detailId = null; document.getElementById('detail')?.remove(); state.view = v; render(); }
 
   // ---------- Lancement ----------
   async function launch(g) {
@@ -1100,8 +1103,52 @@
   const avCoins = (a) => Math.max(0, avStats().earned - a.spent);
   function svgNode(str) { const t = document.createElement('template'); t.innerHTML = str; return t.content.firstChild; } // str vient de ARCAV.svg (valeurs validées)
   let avMsgIdx = 0;
+  // Vie de l'avatar : humeur (dort, content, impatient) et tenue automatique (heure, saison)
+  const mood = { lastInput: Date.now(), baseline: Date.now(), navCount: 0, happyUntil: 0, impatientUntil: 0, impMsg: '', say: null, prevRun: 0, key: '' };
+  function avOutfit() {
+    if (state.settings.avatarAuto === false) return null;
+    const d = new Date(), m = d.getMonth() + 1, day = d.getDate(), hr = d.getHours();
+    if ((m === 10 && day >= 25) || (m === 11 && day === 1)) return { name: 'halloween', over: { acc: 'witch', top: 'pumpkin', topC: '#E8663D', bottomC: '#2a1a3a' }, say: 'Joyeux Halloween ! Bonbon ou sort ?' };
+    if (hr >= 23 || hr < 6) return { name: 'night', over: { acc: 'nightcap', top: 'pajama', topC: '#3B2F8F', bottom: 'pants', bottomC: '#3B2F8F' }, say: 'Il est tard… une dernière partie avant de dormir ?' };
+    if (m === 12 || m <= 2) return { name: 'winter', over: { acc: 'beanie' }, say: 'Il fait froid dehors, reste au chaud avec un jeu !' };
+    if (hr >= 13 && hr < 18) return { name: 'sun', over: { acc: 'shades' }, say: 'Beau temps pour une partie à l\'ombre !' };
+    return null;
+  }
+  function avMood() {
+    const now = Date.now();
+    if (state.running && state.running.size) return 'happy';
+    if (now < mood.happyUntil) return 'happy';
+    if (now - mood.lastInput > 90000) return 'sleep';
+    if (now < mood.impatientUntil) return 'impatient';
+    return '';
+  }
+  function avRunWatch() {
+    const n = state.running ? state.running.size : 0, now = Date.now();
+    if (n > mood.prevRun) { mood.baseline = now; mood.navCount = 0; mood.say = null; }
+    if (n === 0 && mood.prevRun > 0) { mood.happyUntil = now + 30000; mood.lastInput = now; mood.say = { text: 'Alors, c\'était bien ?', until: now + 30000 }; }
+    mood.prevRun = n;
+  }
+  function avTick() {
+    const now = Date.now();
+    if (avMood() === '' && !(state.running && state.running.size) && (mood.navCount >= 8 || (now - mood.baseline > 180000 && now - mood.lastInput < 30000))) {
+      mood.impatientUntil = now + 25000; mood.navCount = 0; mood.baseline = now; mood.impMsg = ['Alors, on se décide ?', 'Je m\'impatiente… on joue ?', 'Tu cherches encore ? Lance-en un au hasard !'][Math.floor(Math.random() * 3)];
+    }
+    const o = avOutfit(), key = avMood() + '|' + (o ? o.name : '');
+    if (key !== mood.key && avOn()) renderAvatar();
+  }
+  const avInput = () => {
+    const now = Date.now(), asleep = now - mood.lastInput > 90000;
+    mood.lastInput = now;
+    if (asleep && avOn()) { mood.happyUntil = now + 6000; mood.say = { text: 'Oh, te revoilà !', until: now + 6000 }; avTick(); }
+  };
+  ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focus'].forEach((ev) => addEventListener(ev, () => { if (Date.now() - mood.lastInput > 400) avInput(); }, { passive: true, capture: true }));
+  setInterval(() => { if (!document.hidden && booted) avTick(); }, 5000);
   function avatarSays() {
     const games = state.games || [], now = Date.now(), msgs = [];
+    const mo = avMood();
+    if (mo === 'sleep') return ['Zzz…'];
+    if (mood.say && now < mood.say.until) return [mood.say.text];
+    if (mo === 'impatient') return [mood.impMsg];
     const hour = new Date().getHours();
     if (!games.length) return ['Ajoute ton premier jeu, je t\'attends !'];
     if (state.running && state.running.size) return ['Bon jeu ! Je garde la place au chaud.', 'Amuse-toi bien, je t\'attends ici.'];
@@ -1114,6 +1161,7 @@
     if (wish && coins >= wish.price) msgs.push('Tu as ' + coins + ' pièces : va voir les nouveaux objets !');
     const fav = games.filter((g) => g.favorite)[0];
     if (fav) msgs.push('Et si on relançait ' + fav.name + ' ?');
+    const fit = avOutfit(); if (fit) msgs.unshift(fit.say);
     msgs.push(hour >= 18 || hour < 5 ? 'Bonsoir ! Prêt pour une partie ?' : hour < 12 ? 'Bonjour ! Qu\'est-ce qu\'on joue aujourd\'hui ?' : 'Salut ! Une petite partie ?');
     return msgs;
   }
@@ -1128,15 +1176,18 @@
     panel.hidden = !open;
     if (!on) return;
     const a = avData(), pr = avStats();
-    navBtn.querySelector('.av-ic').replaceChildren(svgNode(AV.svg(a, 'face', 20)));
+    navBtn.querySelector('.av-ic').replaceChildren(svgNode(AV.svg(a, 'face', 20, { mood: avMood() })));
     $('#av-lv').textContent = 'Niv. ' + pr.level;
     if (!open) return;
+    const curMood = avMood(), outfit = avOutfit();
+    mood.key = curMood + '|' + (outfit ? outfit.name : '');
+    panel.classList.toggle('still', reducedMotion());
     const msgs = avatarSays(), msg = msgs[avMsgIdx % msgs.length];
     const bg = AV.BGS[a.bg] || AV.BGS.b0;
     panel.style.setProperty('--bg1', bg[0]); panel.style.setProperty('--bg2', bg[1]);
     panel.replaceChildren(
-      h('button', { class: 'av-who', title: 'Clique pour me parler', 'data-snd': 'none', onClick: () => { avMsgIdx++; renderAvatar(); const c = $('#av-panel .av-who span'); if (c) c.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-7px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); } },
-        h('span', {}, svgNode(AV.svg(a, 'full', 40)))),
+      h('button', { class: 'av-who mood-' + (curMood || 'calm'), title: 'Clique pour me parler', 'data-snd': 'none', onClick: () => { avMsgIdx++; renderAvatar(); const c = $('#av-panel .av-who span'); if (c) c.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-7px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); } },
+        h('span', {}, svgNode(AV.svg(a, 'full', 40, { ...(outfit ? outfit.over : {}), mood: curMood }))), curMood === 'sleep' ? [h('i', { class: 'av-z z1', text: 'z' }), h('i', { class: 'av-z z2', text: 'Z' })] : null),
       h('div', { class: 'av-bubble', text: msg }),
       h('span', { class: 'av-sp' }),
       h('span', { class: 'av-coins' }, h('i', { class: 'av-coin' }), String(avCoins(a))),
@@ -1217,6 +1268,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.5.0', title: 'Avatar vivant et volume à 30 %', items: ['L\'avatar réagit : il s\'endort quand tu es inactif, il est content quand tu lances un jeu (et quand tu reviens), il s\'impatiente si tu traînes dans les menus.', 'Tenues automatiques : pyjama la nuit, lunettes de soleil l\'après-midi, bonnet en hiver, costume de sorcière à Halloween (désactivable dans Paramètres > Apparence).', 'Le volume par défaut est maintenant de 30 % partout (une fois, y compris sur les installations existantes ; tu peux le changer dans Paramètres > Sons).'] },
     { v: '2.4.2', title: 'Avatar en bande', items: ['L\'avatar passe dans une bande fine sous la barre de recherche (personnage, phrase, pièces, niveau, bouton Personnaliser) : la bibliothèque garde toute sa largeur.', 'La croix masque la bande ; l\'entrée « Mon avatar » du menu la rouvre.'] },
     { v: '2.4.1', title: 'Avatar dans le menu', items: ['L\'icône de l\'avatar dans le menu est maintenant un petit visage dans un cadre, exactement aligné sur les autres icônes.'] },
     { v: '2.4.0', title: 'Ton avatar', items: ['Nouveau : un personnage en pixels qui te représente, avec un niveau (selon ton temps de jeu et tes succès) et des pièces à dépenser.', 'Panneau à droite de la bibliothèque : l\'avatar te parle de tes jeux (ça fait X jours que tu n\'as pas relancé…). Clique dessus pour changer de phrase, sur la flèche pour masquer le panneau.', 'Éditeur « Personnaliser » : peau, cheveux, visage, haut, bas, chaussures, accessoires et fond, avec des couleurs et des objets à acheter ou à débloquer avec des succès.', 'Tu n\'aimes pas ? Paramètres > Apparence > Avatar le désactive complètement.'] },
@@ -2014,6 +2066,7 @@
         themeRow(),
         autoMenuRow(),
         AV ? switchRow('Avatar', 'Affiche ton personnage (menu et panneau à droite de la bibliothèque), son niveau et sa boutique. Désactive-le pour retrouver Arcade sans avatar.', 'avatarOn', () => renderAvatar()) : null,
+        AV ? switchRow('Tenues automatiques', 'L\'avatar s\'habille selon l\'heure et la saison : pyjama la nuit, lunettes de soleil l\'après-midi, bonnet en hiver, costume à Halloween. Il s\'endort aussi quand tu es inactif.', 'avatarAuto', () => renderAvatar()) : null,
         accentRow(),
         logoRow(),
         switchRow('Fond animé', 'Grille pixel, lueurs et petits pixels qui scintillent derrière le lanceur (comme à l\'écran de chargement).', 'bgfx', () => applyAppearance()),
