@@ -1,4 +1,4 @@
-// Arcade (version Rust / Tauri) : même interface que la version PowerShell, même fichier de bibliothèque.
+// Arcade : application Windows autonome (Rust + Tauri). L'interface est dans ../ui.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde_json::{json, Map, Value};
@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-const VERSION: &str = "1.19.0";
+const VERSION: &str = "2.0.0";
 const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -471,11 +471,6 @@ fn find_game(db: &Db, id: &str) -> Option<usize> {
 
 // ---------- couvertures et icônes ----------
 
-#[cfg(windows)]
-const ARC_BASE: &str = "http://arcade.localhost";
-#[cfg(not(windows))]
-const ARC_BASE: &str = "arcade://localhost";
-
 fn url_enc(s: &str) -> String {
     let mut o = String::new();
     for b in s.bytes() {
@@ -486,26 +481,6 @@ fn url_enc(s: &str) -> String {
         }
     }
     o
-}
-
-fn url_dec(s: &str) -> String {
-    let b = s.as_bytes();
-    let mut out: Vec<u8> = vec![];
-    let mut i = 0;
-    while i < b.len() {
-        if b[i] == b'%' {
-            if let Some(h) = b.get(i + 1..i + 3).and_then(|x| std::str::from_utf8(x).ok()) {
-                if let Ok(v) = u8::from_str_radix(h, 16) {
-                    out.push(v);
-                    i += 3;
-                    continue;
-                }
-            }
-        }
-        out.push(b[i]);
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).to_string()
 }
 
 fn file_name_of(p: &str) -> String {
@@ -733,40 +708,6 @@ fn media_data_url(path: &Path) -> Option<String> {
     }
     Some(url)
 }
-
-fn media_response(dir: &Path, path: &str) -> tauri::http::Response<Vec<u8>> {
-    let p = path.trim_start_matches('/');
-    let (kind, name) = p.split_once('/').unwrap_or(("", ""));
-    let name = url_dec(name);
-    let sub = match kind {
-        "cover" => "covers",
-        "icon" => "icons",
-        _ => "",
-    };
-    let bad = sub.is_empty() || name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..");
-    let data = if bad { None } else { fs::read(dir.join(sub).join(&name)).ok() };
-    match data {
-        Some(bytes) => {
-            let ext = name.rsplit('.').next().unwrap_or("").to_lowercase();
-            let mime = match ext.as_str() {
-                "png" => "image/png",
-                "jpg" | "jpeg" => "image/jpeg",
-                "webp" => "image/webp",
-                "gif" => "image/gif",
-                "bmp" => "image/bmp",
-                _ => "application/octet-stream",
-            };
-            tauri::http::Response::builder()
-                .header("Content-Type", mime)
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Cache-Control", "max-age=86400")
-                .body(bytes)
-                .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
-        }
-        None => tauri::http::Response::builder().status(404).body(Vec::new()).unwrap_or_else(|_| tauri::http::Response::new(Vec::new())),
-    }
-}
-
 
 fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, String> {
     match name {
@@ -998,7 +939,7 @@ fn handle(dir: &Path, db: &mut Db, name: &str, body: &Value) -> Result<Value, St
         }
         // Couvertures et icônes : pas encore portées, on répond sans erreur pour ne pas déranger
         // Fonctions pas encore portées dans la version Rust
-        "detectLaunchers" | "addDropped" => {
+        "detectLaunchers" => {
             Err("Pas encore disponible dans la version Rust (en cours de portage).".into())
         }
         _ => Err(format!("Fonction inconnue : {}", name)),
@@ -1669,10 +1610,6 @@ fn main() {
                     _ => {}
                 }
             }
-        })
-        .register_uri_scheme_protocol("arcade", |ctx, req| {
-            let st = ctx.app_handle().state::<App>();
-            media_response(&st.dir, req.uri().path())
         })
         .invoke_handler(tauri::generate_handler![api, setup])
         .setup(move |app| {

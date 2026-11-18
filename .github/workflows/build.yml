@@ -1,75 +1,33 @@
-name: Compiler Arcade.exe
-
+name: Compiler Arcade
+permissions:
+  contents: write
 on:
   push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
+    paths: ['src-tauri/**', 'ui/**', '.github/workflows/build.yml']
   workflow_dispatch:
-
-permissions:
-  contents: write   # nécessaire pour publier une « Release » quand on pousse un tag vX.Y.Z
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
-          go-version: '1.24'
-
-      - name: Lire et vérifier la version
-        id: ver
-        run: |
-          PS_VER=$(grep -m1 -oP '\$script:Version\s*=\s*\x27\K[^\x27]+' app/Arcade.ps1 | tr -d '\r')
-          JS_VER=$(grep -m1 -oP 'APP_VERSION\s*=\s*\x27\K[^\x27]+' app/ui/app.js | tr -d '\r')
-          echo "Arcade.ps1 = $PS_VER | app.js = $JS_VER"
-          if [ "$PS_VER" != "$JS_VER" ]; then echo "::error::Les versions de Arcade.ps1 et app.js doivent être identiques"; exit 1; fi
-          if [[ "$GITHUB_REF" == refs/tags/v* && "${GITHUB_REF#refs/tags/v}" != "$PS_VER" ]]; then
-            echo "::error::Le tag ($GITHUB_REF_NAME) ne correspond pas à la version $PS_VER"; exit 1
-          fi
-          echo "version=$PS_VER" >> "$GITHUB_OUTPUT"
-
-      - name: Vérifier la syntaxe de l'interface
-        run: node --check app/ui/app.js && node --check app/ui/bridge.js && node --check app/ui/sounds.js
-
-      - name: Préparer l'installeur (ressources et icône)
-        working-directory: installer
-        run: |
-          cp -r ../app ./app
-          python3 gen_syso.py "${{ steps.ver.outputs.version }}"
-
-      - name: Compiler Arcade.exe (Windows 64 bits)
-        working-directory: installer
-        env:
-          CGO_ENABLED: '0'
-          GOOS: windows
-          GOARCH: amd64
-        run: |
-          go vet ./...
-          mkdir -p ../dist
-          go build -trimpath -ldflags "-s -w -H=windowsgui" -o ../dist/Arcade.exe .
-
-      - name: Empreinte et archive
-        working-directory: dist
-        run: |
-          sha256sum Arcade.exe | tee Arcade.exe.sha256
-          zip -q Arcade-Installeur.zip Arcade.exe
-
+          workspaces: src-tauri
+      - name: Compilation
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml
+      - name: Renommer en Arcade.exe
+        shell: bash
+        run: cp src-tauri/target/release/arcade.exe Arcade.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: Arcade-${{ steps.ver.outputs.version }}
-          path: dist/*
-
-      - name: Publier la Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Arcade ${{ steps.ver.outputs.version }}
-          generate_release_notes: true
-          files: |
-            dist/Arcade.exe
-            dist/Arcade-Installeur.zip
-            dist/Arcade.exe.sha256
+          name: Arcade
+          path: Arcade.exe
+      - name: Publier la dernière version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete rust-latest --yes --cleanup-tag || true
+          gh release delete dernier --yes --cleanup-tag || true
+          gh release create dernier Arcade.exe --prerelease --title "Arcade (dernière version)" --notes "Télécharge Arcade.exe, lance-le et choisis où l'installer."

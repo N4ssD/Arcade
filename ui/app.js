@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '1.19.0';
+  const APP_VERSION = '2.0.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1012,6 +1012,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : plus besoin d\'Edge ni de PowerShell, Arcade est un seul fichier Arcade.exe.', 'Installeur intégré : tu choisis le dossier, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul et se déploie au survol.', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Bientôt : import Steam/Epic/GOG et temps de jeu en direct.'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
     { v: '1.17.0', title: 'Réinitialisation et installeur', items: ['Paramètres > Réinitialisation : remet Arcade à neuf (bibliothèque, catégories, statistiques, couvertures, réglages).', 'Arcade.exe : un vrai installeur avec choix du dossier, raccourcis Bureau et menu Démarrer, mise à jour et désinstallation.'] },
@@ -1564,39 +1565,7 @@
   });
 
   // ---------- Glisser-déposer ----------
-  let dragDepth = 0;
-  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
-  const toB64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
-  window.addEventListener('dragenter', (e) => { e.preventDefault(); if (!hasFiles(e)) return; dragDepth++; $('#dropzone').classList.add('show'); });
-  window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#dropzone').classList.remove('show'); } });
-  window.addEventListener('dragover', (e) => e.preventDefault());
-  window.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    if ([...(e.dataTransfer?.types || [])].includes('text/arcade-id')) return;
-    dragDepth = 0;
-    $('#dropzone').classList.remove('show');
-    const files = [...(e.dataTransfer?.files || [])];
-    if (!files.length) return;
-    const shortcuts = files.filter((f) => /\.(lnk|url)$/i.test(f.name));
-    let added = 0, errorMsg = '';
-    for (const f of shortcuts) {
-      try {
-        const r = await api.addDropped(f.name, toB64(await f.arrayBuffer()));
-        if (r.error) errorMsg = r.error; else added += r.added || 0;
-      } catch (err) { errorMsg = err.message || String(err); }
-    }
-    if (added) { Sound.play('success'); toast(`${added} jeu(x) ajouté(s) depuis tes raccourcis.`, 'ok'); await load(); }
-    else if (errorMsg) toast(errorMsg, 'error');
-    const others = files.filter((f) => !/\.(lnk|url)$/i.test(f.name));
-    if (others.length) {
-      // Le navigateur ne révèle pas l'emplacement d'un .exe ou d'un dossier : on ouvre le sélecteur Windows à la place
-      const isDir = others.some((f) => !f.type && !/\.[a-z0-9]{1,5}$/i.test(f.name));
-      toast(isDir ? 'Pour un dossier, choisis-le dans la fenêtre qui s\'ouvre.' : 'Pour un .exe, choisis-le dans la fenêtre qui s\'ouvre (le navigateur ne connaît pas son emplacement).', '');
-      if (isDir) scanFlow(); else openGameModal(null);
-    } else if (!shortcuts.length) toast('Dépose des raccourcis (.lnk, .url), ou utilise « Ajouter un jeu ».', 'error');
-  });
-
-  // Application Rust (Tauri) : le système donne directement les chemins des fichiers déposés
+  // Le système donne directement les chemins des fichiers déposés (raccourcis .lnk / .url, .exe)
   if (window.__TAURI__ && window.__TAURI__.event) {
     const ev = window.__TAURI__.event;
     ev.listen('arcade-drag', (e) => { $('#dropzone').classList.toggle('show', !!(e.payload && e.payload.over)); });
@@ -1804,7 +1773,7 @@
       ),
       h('div', { class: 'set-group' },
         h('h2', { text: 'À propos' }),
-        h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Arcade ' + APP_VERSION }), h('small', { text: 'Tes données sont enregistrées dans %APPDATA%\\Arcade.' })), h('button', { class: 'btn', 'data-snd': 'none', onClick: openNews }, icon('check'), 'Voir les nouveautés'))
+        h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Arcade ' + APP_VERSION }), h('small', { text: 'Tes données sont dans le sous-dossier data du dossier d\'installation.' })), h('button', { class: 'btn', 'data-snd': 'none', onClick: openNews }, icon('check'), 'Voir les nouveautés'))
       )
     );
   }

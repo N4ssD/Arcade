@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Arcade",
-  "version": "1.19.0",
+  "version": "2.0.0",
   "identifier": "fr.n4ssd.arcade",
   "build": {
-    "frontendDist": "../app/ui"
+    "frontendDist": "../ui"
   },
   "app": {
     "withGlobalTauri": true,
@@ -18,6 +18,8 @@
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "N4ssD",
+    "shortDescription": "Arcade - lanceur de jeux"
   }
 }
