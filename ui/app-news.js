@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.8.1', title: 'Moteur mieux rangé', items: ['Le code du moteur (Rust) est découpé en modules : utilitaires, réglages, bibliothèque, lancement, couvertures, installation, mises à jour, zone de notification… Rien ne change à l\'écran.'] },
   { v: '2.8.0', title: 'Code mieux rangé', items: ['Le code de l\'interface est découpé en plusieurs fichiers (noyau, bibliothèque, succès, avatar, catégories, paramètres…). Rien ne change à l\'écran.'] },
   { v: '2.7.2', title: 'Finitions', items: ['Le bandeau « pièces à récupérer » est mieux aligné et traduit en anglais.'] },
   { v: '2.7.1', title: 'Récupérer ses pièces', items: ['Succès : un bouton « Récupérer » sur chaque succès débloqué, et « Tout récupérer » en haut, pour encaisser les pièces.', 'Le bouton Personnaliser de la bande est plus discret.'] },

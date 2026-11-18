@@ -111,7 +111,7 @@ The executable is then in `src-tauri/target/release/arcade.exe`. Running it from
 | Folder | Content |
 |---|---|
 | `src-tauri/` | The Rust code (`src/main.rs`), the Tauri configuration and the icons |
-| `ui/` | The interface (HTML, CSS, dependency-free JavaScript) and the embedded fonts |
+| `ui/` | The interface (HTML, CSS, dependency-free JavaScript split into `app-*.js` files) and the embedded fonts |
 | `docs/screenshots/` | The images used on this page |
 | `.github/workflows/` | Automatic build and publishing |
 

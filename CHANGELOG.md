@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.1 — Tidier engine
+- The Rust engine is split into modules (utilities, settings, library storage, launching, covers, installer, updates, tray…). Nothing changes on screen.
+
 ## 2.8.0 — Tidier code
 - The UI code is split into several files (core, library, achievements, avatar, categories, settings…). Nothing changes on screen.
 
