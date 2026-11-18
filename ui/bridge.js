@@ -63,6 +63,7 @@
     refreshIcon: (id) => call('refreshIcon', { id }),
     fetchCover: (id, opts = {}) => call('fetchCover', { id, ...opts }),
     detectLaunchers: () => call('detectLaunchers'),
+    logError: (msg) => call('logError', { msg: String(msg).slice(0, 300) }),
     setIcon: (png) => call('setIcon', { png }),
     perf: () => call('perf'),
     checkLibrary: () => call('checkLibrary'),

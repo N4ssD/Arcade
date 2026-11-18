@@ -137,6 +137,14 @@ function renderSettings() {
   });
   vol.addEventListener('change', async () => { await api.setSettings({ volume: Number(vol.value) }); Sound.play('nav'); });
 
+  const mvol = h('input', { type: 'range', min: '0', max: '100', step: '1', value: String(s.musicVol == null ? 20 : s.musicVol) });
+  const mvolVal = h('span', { class: 'val', text: mvol.value + '%' });
+  const mvolRow = h('div', { class: 'setting' + (s.music === false ? ' disabled' : ''), id: 'row-musicVol' },
+    h('div', { class: 'setting-text' }, h('b', { text: 'Volume de la musique' }), h('small', { text: 'Indépendant du volume des sons.' })),
+    mvol, mvolVal);
+  mvol.addEventListener('input', () => { mvolVal.textContent = mvol.value + '%'; state.settings.musicVol = Number(mvol.value); applySound(); });
+  mvol.addEventListener('change', async () => { await api.setSettings({ musicVol: Number(mvol.value) }); });
+
   const missing = h('button', { class: 'btn ghost', text: 'Rechercher les couvertures manquantes', onClick: () => {
     const todo = state.games.filter((g) => !g.cover && !g.coverUrl);
     if (!todo.length) return toast('Tous tes jeux ont déjà une couverture.', 'ok');
@@ -155,6 +163,8 @@ function renderSettings() {
       }),
       volRow,
       (() => { const r = switchRow('Sons au clic', 'Un petit son doux quand tu cliques sur un bouton ou changes de section.', 'clickSounds'); if (!s.sounds) r.classList.add('disabled'); return r; })(),
+      switchRow('Musique d\'ambiance', 'Une douce musique de fond, générée en direct. S\'arrête quand Arcade est réduit.', 'music', (on) => { $('#row-musicVol').classList.toggle('disabled', !on); applySound(); }),
+      mvolRow,
       (() => { const r = switchRow('Sons au survol', 'Un léger tic quand la souris passe sur un jeu.', 'hoverSounds'); if (!s.sounds) r.classList.add('disabled'); return r; })()
     ),
     h('div', { class: 'set-group' },

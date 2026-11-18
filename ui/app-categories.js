@@ -280,9 +280,13 @@ function openGameModal(game, prefill = {}) {
   } }) : null;
   const clearCover = h('button', { class: 'btn ghost', text: 'Retirer', onClick: () => { data.cover = null; paintPrev(); } });
 
+  let busy = false; // évite un double envoi (double clic, Entrée + clic) qui ajoutait le jeu puis affichait « déjà dans ta bibliothèque »
   const save = h('button', { class: 'btn primary', text: editing ? 'Enregistrer' : 'Ajouter', onClick: async () => {
+    if (busy) return;
     const target = inTarget.value.trim();
     if (!target) { inTarget.focus(); return toast('Indique le fichier ou le lien du jeu.', 'error'); }
+    busy = true; save.disabled = true;
+    try {
     if (editing) {
       const patch = { name: inName.value, target, category: inCat.value, args: inArgs.value, runAs: inAdmin.checked };
       if (data.cover !== undefined) patch.cover = data.cover;
@@ -295,6 +299,7 @@ function openGameModal(game, prefill = {}) {
       toast('Jeu ajouté ! Recherche de la couverture…', 'ok');
     }
     closeModal(); load();
+    } finally { busy = false; save.disabled = false; }
   } });
 
   paintPrev();

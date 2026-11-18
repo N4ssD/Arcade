@@ -3,7 +3,7 @@ use super::*;
 
 pub(crate) fn default_settings() -> Obj {
     let v = json!({
-        "cardSize": 200, "volume": 30, "volumeV": 0, "sounds": true, "hoverSounds": true, "clickSounds": true,
+        "cardSize": 200, "volume": 30, "volumeV": 0, "music": true, "musicVol": 20, "sounds": true, "hoverSounds": true, "clickSounds": true,
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
@@ -28,6 +28,11 @@ pub(crate) fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
             }
         }
         "volume" => {
+            if let Some(n) = v.as_i64() {
+                settings.insert(k.into(), json!(n.clamp(0, 100)));
+            }
+        }
+        "musicVol" => {
             if let Some(n) = v.as_i64() {
                 settings.insert(k.into(), json!(n.clamp(0, 100)));
             }
@@ -104,7 +109,7 @@ pub(crate) fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
                 settings.insert(k.into(), Value::Object(out));
             }
         }
-        "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "hoverSounds" | "clickSounds" | "autoCovers"
+        "bgfx" | "animations" | "effects" | "ambient" | "slideshow" | "sounds" | "music" | "hoverSounds" | "clickSounds" | "autoCovers"
         | "sidebarCollapsed" | "introAnim" | "trayMode" | "minimizeOnLaunch" | "checkUpdates" | "ecoMode" | "perfChip" | "avatarOn" | "avatarPanel" | "avatarAuto" => {
             if let Some(b) = v.as_bool() {
                 settings.insert(k.into(), json!(b));

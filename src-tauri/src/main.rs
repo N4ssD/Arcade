@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-pub(crate) const VERSION: &str = "2.9.0";
+pub(crate) const VERSION: &str = "2.10.0";
 pub(crate) const PALETTE: [&str; 8] = ["#9c7cf0", "#5ec2ff", "#58d68d", "#ffd166", "#ff8f5e", "#ff6b9a", "#3fd0c9", "#e0a3ff"];
 pub(crate) const SCHEMES: [&str; 11] = [
     "steam", "com.epicgames.launcher", "goggalaxy", "uplay", "origin2", "origin", "battlenet", "xbox",
@@ -165,6 +165,20 @@ async fn setup(name: String, body: Value, app: tauri::AppHandle) -> Result<Value
 
 #[tauri::command]
 async fn api(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
+    if name == "logError" {
+        log(&state.dir, &format!("Erreur interface : {}", limit(&gs(&body, "msg"), 300)));
+        return Ok(json!({ "ok": true }));
+    }
+    let dir = state.dir.clone();
+    let label = name.clone();
+    let res = api_inner(name, body, state, app).await;
+    if let Err(e) = &res {
+        log(&dir, &format!("Erreur « {} » : {}", label, e));
+    }
+    res
+}
+
+async fn api_inner(name: String, body: Value, state: tauri::State<'_, App>, app: tauri::AppHandle) -> Result<Value, String> {
     if name == "perf" {
         let running = state.running.lock().map(|r| !r.is_empty()).unwrap_or(false);
         return tauri::async_runtime::spawn_blocking(move || Ok(perf_snapshot(running))).await.map_err(|e| e.to_string())?;

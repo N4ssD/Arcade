@@ -3,12 +3,17 @@
 'use strict';
 
 const api = window.arcade;
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 
 // Toute erreur du serveur est affichée (plus d'échec silencieux)
 window.addEventListener('unhandledrejection', (e) => {
   const m = (e.reason && e.reason.message) || String(e.reason || 'erreur inconnue');
   toast('Erreur : ' + m, 'error');
+  try { api.logError(m); } catch (_) {}
+});
+window.addEventListener('error', (e) => {
+  const m = (e.message || 'erreur') + (e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : '');
+  try { api.logError(m); } catch (_) {}
 });
 
 // ---------- État ----------
@@ -19,7 +24,7 @@ const state = {
   view: 'all', // all | fav | recent | cat:<nom>
   query: '',
   sort: 'name',
-  settings: { cardSize: 200, volume: 30, sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
+  settings: { cardSize: 200, volume: 30, music: true, musicVol: 20, sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
   fetching: new Set(), // jeux dont la couverture est en cours de recherche
   attempted: new Set(), // évite de relancer une recherche en boucle
   queue: [],
@@ -115,7 +120,9 @@ function toast(msg, kind = '') {
   const t = h('div', { class: `toast ${kind}`, text: msg });
   $('#toasts').append(t);
   if (kind === 'error') Sound.play('error');
-  setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3200);
+  const gone = () => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); };
+  if (kind === 'error') { t.title = 'Cliquer pour fermer'; t.style.cursor = 'pointer'; t.addEventListener('click', gone); setTimeout(gone, 12000); }
+  else setTimeout(gone, 3200);
 }
 
 // ---------- Données ----------
@@ -211,6 +218,7 @@ function updateRow() {
 
 function applySound() {
   Sound.configure({ enabled: state.settings.sounds, volume: state.settings.volume / 100, hover: state.settings.hoverSounds, click: state.settings.clickSounds });
+  Music.configure({ on: state.settings.music !== false, vol: state.settings.musicVol == null ? 20 : state.settings.musicVol });
 }
 
 // Le zoom agrandit la CASE du jeu ; l'icône au centre et le décor flou derrière gardent leur taille

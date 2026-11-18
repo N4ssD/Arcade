@@ -195,6 +195,8 @@ pub(crate) fn extract_icon(dir: &Path, target: &str) -> Option<String> {
 }
 
 pub(crate) static ICON_BUSY: AtomicBool = AtomicBool::new(false);
+// Jeux dont l'icône a déjà été tentée pendant cette session (un échec est retenté une fois à chaque lancement d'Arcade)
+pub(crate) static ICON_SESSION: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 // Extrait en arrière-plan les icônes des jeux qui n'en ont pas encore (un seul traitement à la fois, en lot)
 pub(crate) fn spawn_icon_jobs(app: tauri::AppHandle) {
@@ -210,14 +212,17 @@ pub(crate) fn spawn_icon_jobs(app: tauri::AppHandle) {
                     let mut changed = false;
                     for g in db.games.iter_mut() {
                         let none = g.get("icon").map(|x| x.is_null()).unwrap_or(true);
-                        let tried = g.get("iconTried").and_then(|x| x.as_bool()).unwrap_or(false);
-                        if !none || tried {
+                        let id = g.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                        let done_now = ICON_SESSION.lock().map(|s| s.contains(&id)).unwrap_or(true);
+                        if !none || done_now {
                             continue;
                         }
-                        let id = g.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
                         let target = g.get("target").and_then(|x| x.as_str()).unwrap_or("").to_string();
                         if is_uri(&target) || !Path::new(&target).is_file() {
                             g.insert("iconTried".into(), json!(true));
+                            if let Ok(mut s) = ICON_SESSION.lock() {
+                                s.push(id.clone());
+                            }
                             changed = true;
                         } else {
                             v.push((id, target));
@@ -237,6 +242,9 @@ pub(crate) fn spawn_icon_jobs(app: tauri::AppHandle) {
             let icons = extract_icons(&st.dir, &targets);
             if let Ok(mut db) = st.db.lock() {
                 for ((id, _), ico) in todo.iter().zip(icons) {
+                    if let Ok(mut s) = ICON_SESSION.lock() {
+                        s.push(id.clone());
+                    }
                     if let Some(i) = find_game(&db, id) {
                         db.games[i].insert("iconTried".into(), json!(true));
                         if let Some(p) = ico {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.10.0 — Ambient music and reliability
+- New soft ambient background music, generated live. Settings > Sounds: on/off switch and its own volume. Pauses when Arcade is minimized.
+- Adding games: no more false "already in your library" message after a double click or a drop event sent twice by Windows.
+- Error messages stay 12 seconds (click to dismiss) and are written to `data\arcade.log`.
+- Icons: games without an icon are retried each time Arcade starts.
+
 ## 2.9.0 — The icon follows your color
 - The taskbar and notification-area icon now take your accent color (or your custom logo color).
 - Windows limit: a taskbar-pinned shortcut keeps its original icon; only the open window's icon changes.

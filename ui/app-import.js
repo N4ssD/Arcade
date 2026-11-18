@@ -155,13 +155,14 @@ api.onNotice?.((n) => {
 
 // ---------- Glisser-déposer ----------
 // Le système donne directement les chemins des fichiers déposés (raccourcis .lnk / .url, .exe)
+let lastDropAdd = 0;
 if (window.__TAURI__ && window.__TAURI__.event) {
   const ev = window.__TAURI__.event;
   ev.listen('arcade-drag', (e) => { $('#dropzone').classList.toggle('show', !!(e.payload && e.payload.over)); });
   ev.listen('arcade-dropped', async (e) => {
     const { added = 0, skipped = 0 } = e.payload || {};
-    if (added) { Sound.play('success'); toast(`${added} jeu(x) ajouté(s).`, 'ok'); await load(); }
+    if (added) { lastDropAdd = Date.now(); Sound.play('success'); toast(`${added} jeu(x) ajouté(s).`, 'ok'); await load(); }
     else if (skipped) toast('Dépose des raccourcis (.lnk, .url) ou des .exe.', 'error');
-    else toast('Ce jeu est déjà dans ta bibliothèque.', '');
+    else if (Date.now() - lastDropAdd > 5000) toast('Ce jeu est déjà dans ta bibliothèque.', ''); // Windows peut envoyer le dépôt deux fois : on ignore le doublon juste après un ajout
   });
 }

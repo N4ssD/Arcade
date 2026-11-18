@@ -181,6 +181,7 @@
     // --- paramètres ---
     'Sons': 'Sounds', 'Sons de l\'interface': 'Interface sounds', 'Petits sons doux lors des clics, des ouvertures et du lancement des jeux.': 'Soft little sounds on clicks, openings and game launches.',
     'Sons au clic': 'Click sounds', 'Un petit son doux quand tu cliques sur un bouton ou changes de section.': 'A soft little sound when you click a button or change section.',
+    'Musique d\'ambiance': 'Ambient music', 'Une douce musique de fond, générée en direct. S\'arrête quand Arcade est réduit.': 'A soft background music, generated live. Stops when Arcade is minimized.', 'Volume de la musique': 'Music volume', 'Indépendant du volume des sons.': 'Independent from the sounds volume.', 'Cliquer pour fermer': 'Click to close',
     'Sons au survol': 'Hover sounds', 'Un léger tic quand la souris passe sur un jeu.': 'A light tick when the mouse moves over a game.',
     'Règle le volume des sons du lanceur.': 'Sets the volume of the launcher sounds.', 'Jouer un son': 'Play a sound',
     'Performance': 'Performance', 'Animations': 'Animations', 'Désactive les transitions et animations (survols, ouvertures, clics, défilements). Idéal sur un PC modeste.': 'Turns off transitions and animations (hovers, openings, clicks, scrolling). Ideal on a modest PC.',
