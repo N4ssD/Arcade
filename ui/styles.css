@@ -923,6 +923,9 @@ body.collapsed:not(.menu-open) .perf-chip span { display: none; }
 body.collapsed:not(.menu-open) .perf-chip { justify-content: center; padding: 8px 0; }
 
 /* Menu replié : fines séparations entre les groupes (ligne qui s'estompe aux extrémités, centrée, même espace dessus/dessous) */
-body.collapsed:not(.menu-open) .nav.cats:not(:empty)::before { content: ""; display: block; width: 34px; height: 1px; margin: 8px auto 8px; background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
+/* le titre « Catégories » garde sa place (il apparaît à l'ouverture du menu) : replié, la ligne est centrée dans cette zone, donc pile entre le dernier lien et la 1re catégorie */
+.side-title { margin: 0 12px; padding: 22px 0 10px; position: relative; }
+body.collapsed:not(.menu-open) #cat-title:not([hidden])::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 1px; transform: translate(-50%, -50%); background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
 body.collapsed:not(.menu-open) #btn-settings { margin-bottom: 9px; }
-body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 50%; bottom: -9px; width: 34px; height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
+body.collapsed:not(.menu-open) #btn-settings::after { content: ""; position: absolute; left: 50%; bottom: 7px; width: 34px; height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, #5a5a70 30%, #5a5a70 70%, transparent); }
+body.collapsed:not(.menu-open) #cat-title:not([hidden]) { opacity: 1; color: transparent; }

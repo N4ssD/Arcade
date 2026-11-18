@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.3.5 — Separators recentered
+- Collapsed menu: both separators now sit exactly halfway between the icons, and follow automatically when categories are added or removed.
+
 ## 2.3.4 — Menu separators
 - Collapsed menu: separators are now thin lines that fade at both ends, centered, with equal spacing above and below.
 

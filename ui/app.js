@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.3.4';
+  const APP_VERSION = '2.3.5';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1093,6 +1093,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
+    { v: '2.3.5', title: 'Séparateurs recentrés', items: ['Menu replié : les deux séparateurs sont maintenant exactement au milieu entre les icônes (ils suivent aussi automatiquement l\'ajout de catégories).'] },
     { v: '2.3.4', title: 'Séparateurs du menu', items: ['Menu replié : les séparateurs sont des lignes fines qui s\'estompent aux extrémités, centrées, avec le même espace au-dessus et au-dessous.'] },
     { v: '2.3.3', title: 'Menu', items: ['Menu replié : fines lignes de séparation entre les groupes.', 'Le point « nouveauté » ne recouvre plus l\'icône Nouveautés (il se place dans son coin).', 'Nouvelle icône pour « Scanner un dossier » (dossier avec une loupe), pour ne plus la confondre avec les catégories.'] },
     { v: '2.3.2', title: 'Couleur perso', items: ['Le bouton « couleur personnalisée » (le rond arc-en-ciel) est remplacé par un rond discret en pointillés avec un « + » ; une fois une couleur choisie, il prend cette couleur et affiche un crayon.'] },
