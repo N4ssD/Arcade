@@ -1,0 +1,20 @@
+[package]
+name = "arcade"
+version = "1.19.0"
+description = "Arcade - lanceur de jeux"
+authors = ["N4ssD"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["custom-protocol"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

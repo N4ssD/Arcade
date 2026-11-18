@@ -10,3 +10,4 @@ installer/*.syso
 .idea/
 Thumbs.db
 .DS_Store
+rust/target/

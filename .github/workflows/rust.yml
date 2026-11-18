@@ -1,0 +1,20 @@
+name: Arcade Rust (Tauri)
+on:
+  push:
+    paths: ['rust/**', 'app/ui/**', '.github/workflows/rust.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Compilation
+        run: cargo build --release --manifest-path rust/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Arcade-rust-windows
+          path: rust/target/release/arcade.exe

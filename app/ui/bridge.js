@@ -4,7 +4,13 @@
   const token = new URLSearchParams(location.search).get('t') || '';
   document.body.classList.add('web');
 
+  // Dans l'application Rust (Tauri), on passe par invoke ; sinon par le serveur local PowerShell.
+  const tauri = window.__TAURI__ && window.__TAURI__.core;
   async function call(name, body = {}) {
+    if (tauri) {
+      try { return await tauri.invoke('api', { name, body }); }
+      catch (e) { throw new Error(typeof e === 'string' ? e : (e && e.message) || 'Erreur'); }
+    }
     const r = await fetch('/api/' + name, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Arcade-Token': token },
@@ -59,5 +65,5 @@
   beat();
   setInterval(beat, 3000);
   // Fenêtre fermée : on prévient le serveur pour qu'il s'arrête (sinon il resterait en arrière-plan)
-  window.addEventListener('pagehide', () => { try { navigator.sendBeacon('/api/bye?t=' + encodeURIComponent(token), new Blob(['{}'], { type: 'text/plain' })); } catch {} });
+  if (!tauri) window.addEventListener('pagehide', () => { try { navigator.sendBeacon('/api/bye?t=' + encodeURIComponent(token), new Blob(['{}'], { type: 'text/plain' })); } catch {} });
 })();
