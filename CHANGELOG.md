@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.0 — Tidier code
+- The UI code is split into several files (core, library, achievements, avatar, categories, settings…). Nothing changes on screen.
+
 ## 2.7.2 — Polish
 - English text for the coin-collect banner, tidier layout of that banner.
 - New screenshots on the GitHub page.

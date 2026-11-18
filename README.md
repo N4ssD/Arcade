@@ -117,8 +117,8 @@ The executable is then in `src-tauri/target/release/arcade.exe`. Running it from
 
 ## Releasing a new version
 
-Use the same version number in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `VERSION` in `src-tauri/src/main.rs` and `APP_VERSION` in `ui/app.js`.
-Also add an entry to `CHANGELOG.md` and to the `CHANGELOG` list in `ui/app.js` (the "What's new" button). The updater compares the version in `src-tauri/Cargo.toml` on `main` with the installed one.
+Use the same version number in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `VERSION` in `src-tauri/src/main.rs` and `APP_VERSION` in `ui/app-core.js`.
+Also add an entry to `CHANGELOG.md` and to the `CHANGELOG` list in `ui/app-news.js` (the "What's new" button). The updater compares the version in `src-tauri/Cargo.toml` on `main` with the installed one.
 
 ## License
 
