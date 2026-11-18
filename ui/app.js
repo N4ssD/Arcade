@@ -2,7 +2,7 @@
   'use strict';
 
   const api = window.arcade;
-  const APP_VERSION = '2.1.0';
+  const APP_VERSION = '2.2.0';
 
   // Toute erreur du serveur est affichée (plus d'échec silencieux)
   window.addEventListener('unhandledrejection', (e) => {
@@ -1045,7 +1045,7 @@
 
   // ---------- Nouveautés (historique des versions) ----------
   const CHANGELOG = [
-    { v: '2.1.0', title: 'Mises à jour automatiques', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.', 'Nouveau dans les réglages : « Vérifier la bibliothèque » (jeux introuvables et doublons, avec fusion) et « Désinstaller Arcade » (avec ou sans ta bibliothèque).'] },
+    { v: '2.2.0', title: 'Entretien et mises à jour', items: ['Arcade vérifie s\'il existe une nouvelle version et te propose de l\'installer en un clic : il se télécharge, se met à jour tout seul et se rouvre (réglable, avec un bouton « Rechercher » dans les réglages).', 'Lancement en administrateur : les arguments et le dossier de travail du jeu sont maintenant transmis.', 'Arguments de lancement pris en compte aussi pour les fichiers .bat et .cmd.', 'Nouveau dans les réglages : « Vérifier la bibliothèque » (jeux introuvables et doublons, avec fusion) et « Désinstaller Arcade » (avec ou sans ta bibliothèque).'] },
     { v: '2.0.0', title: 'Arcade devient une vraie application', items: ['Réécrit en Rust : Arcade a sa propre fenêtre et n\'a plus besoin d\'Edge ni du serveur PowerShell.', 'ArcadeSetup.exe : tu choisis le dossier d\'installation, et tes données (bibliothèque, pochettes, journal) sont rangées dans le sous-dossier data.', 'Menu automatique : il se réduit tout seul, et en s\'ouvrant au survol il pousse le contenu vers la droite (réglable).', 'Glisser-déposer de raccourcis et de .exe directement dans la fenêtre.', 'Temps de jeu compté en direct, rappel de pause et import Steam / Epic / GOG.', 'Arcade se réduit quand tu lances un jeu, et se rouvre tout seul quand le jeu se ferme.', 'Un clic sur le logo change le mode du menu : automatique, déplié en permanence ou fermé en permanence.', 'Démarrage avec Windows et zone de notification.', 'Choix de la langue : français ou anglais (Paramètres > Apparence).'] },
     { v: '1.19.0', title: 'Succès Arcade', items: ['Nouveau bouton « Succès » : 18 badges à débloquer (jeux ajoutés, heures cumulées, jours d\'affilée, favoris, jeux terminés…).', 'Une notification s\'affiche à chaque succès débloqué ; ta progression est enregistrée.'] },
     { v: '1.18.0', title: 'Nouveautés', items: ['Nouveau bouton « Nouveautés » : l\'historique des changements de chaque version.', 'Un point violet t\'indique quand une nouvelle version est arrivée.'] },
