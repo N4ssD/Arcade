@@ -17,7 +17,7 @@ function resumeTile(g) {
     onMouseenter: () => setAmbient(g)
   }, thumb,
     h('div', { class: 'rs-info' }, h('div', { class: 'name', title: g.name, text: g.name }), h('div', { class: 'meta', text: meta })),
-    h('button', { class: 'btn primary rs-play', 'data-snd': 'none', title: 'Jouer', onClick: (e) => { e.stopPropagation(); launch(g); } }, icon('play'), 'Jouer'));
+    h('button', { class: 'btn primary rs-play', 'data-snd': 'none', title: 'Jouer', 'aria-label': 'Jouer', onClick: (e) => { e.stopPropagation(); launch(g); } }, icon('play')));
 }
 function resumeBlock() {
   if (state.view !== 'all' || state.query.trim()) return null;

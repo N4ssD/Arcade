@@ -3,7 +3,7 @@
 'use strict';
 
 const api = window.arcade;
-const APP_VERSION = '2.12.0';
+const APP_VERSION = '2.12.1';
 
 // Toute erreur du serveur est affichée (plus d'échec silencieux)
 window.addEventListener('unhandledrejection', (e) => {
@@ -24,7 +24,7 @@ const state = {
   view: 'all', // all | fav | recent | cat:<nom>
   query: '',
   sort: 'name',
-  settings: { cardSize: 200, volume: 30, music: true, musicVol: 20, cursor: true, cursorSize: 1, xmasMode: 1, sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
+  settings: { cardSize: 200, volume: 30, music: true, musicVol: 20, cursor: true, cursorSize: 1, xmasMode: 1, theme: 'auto', sounds: true, hoverSounds: true, clickSounds: true, autoCovers: true, sidebarCollapsed: false, introAnim: true },
   fetching: new Set(), // jeux dont la couverture est en cours de recherche
   attempted: new Set(), // évite de relancer une recherche en boucle
   queue: [],

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.1 — Auto theme and Resume
+- The theme follows Windows by default (Settings > Appearance > Theme: Dark, Light or Auto). An already saved choice is kept.
+- Resume section: the Play button is now a small round button with just the triangle, leaving room for the game name.
+
 ## 2.12.0 — Christmas theme
 - From December 1 to January 6 Arcade dresses up by itself: string lights, snow, a pixel tree, a Santa hat on the logo, a red accent and a festive avatar.
 - Not a fan? Settings > Appearance > "Christmas theme": Auto, Always or Never. Snow and lights stop when animations or visual effects are off.

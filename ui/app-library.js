@@ -382,7 +382,8 @@ function applyLogo(acc) {
 function reducedMotion() { return (state.settings && state.settings.animations === false) || !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
 function applyAppearance() {
   const s = state.settings, root = document.documentElement;
-  const mode = s.theme === 'light' ? 'light' : s.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : 'dark';
+  const th = s.theme || 'auto';
+  const mode = th === 'light' ? 'light' : th === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : 'dark';
   root.dataset.theme = mode;
   const acc = xmasOn() ? XMAS_RED : /^#[0-9a-f]{6}$/i.test(s.accent || '') ? s.accent.toLowerCase() : '#9c7cf0';
   const [hh, ss, ll] = hexToHsl(acc);
@@ -403,7 +404,7 @@ function applyAppearance() {
   document.body.classList.toggle('fx-off', s.effects === false);
   if (s.ambient === false && !amb.show) setAmbient(null);
 }
-matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if (state.settings.theme === 'auto') applyAppearance(); });
+matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if ((state.settings.theme || 'auto') === 'auto') applyAppearance(); });
 
 // ---------- Ambiance : l'image du jeu survolé en grand arrière-plan, et diaporama au repos ----------
 function setAmbient(g, force) {

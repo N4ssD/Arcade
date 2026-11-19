@@ -67,7 +67,7 @@ function themeRow() {
     state.settings.theme = v; sync(); applyAppearance(); Sound.play('tick'); bump('themeChanges');
     try { await api.setSettings({ theme: v }); } catch (e) { toast(e.message || String(e), 'error'); }
   } }));
-  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', (state.settings.theme || 'dark') === opts[i][0]));
+  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', (state.settings.theme || 'auto') === opts[i][0]));
   sync();
   return h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Thème' }), h('small', { text: 'Sombre, clair, ou comme Windows (Auto).' })), h('div', { class: 'seg' }, ...btns));
 }

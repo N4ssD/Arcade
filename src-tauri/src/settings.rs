@@ -5,7 +5,7 @@ pub(crate) fn default_settings() -> Obj {
     let v = json!({
         "cardSize": 200, "volume": 30, "volumeV": 0, "music": true, "musicVol": 20, "cursor": true, "cursorSize": 1, "xmasMode": 1, "sounds": true, "hoverSounds": true, "clickSounds": true,
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
-        "breakReminder": 0, "theme": "dark", "accent": "#9C7CF0", "accentV": 2, "logo": "",
+        "breakReminder": 0, "theme": "auto", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
         "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false,
         "avatarOn": true, "avatarPanel": true, "avatarAuto": true, "avatar": {}, "counters": {}, "achBase": {}
