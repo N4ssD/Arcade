@@ -3,7 +3,7 @@
 'use strict';
 
 const api = window.arcade;
-const APP_VERSION = '2.12.3';
+const APP_VERSION = '2.12.4';
 
 // Toute erreur du serveur est affichée (plus d'échec silencieux)
 window.addEventListener('unhandledrejection', (e) => {

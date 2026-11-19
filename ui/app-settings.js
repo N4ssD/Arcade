@@ -37,52 +37,31 @@ function langRow() {
   return h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Langue' }), h('small', { text: 'Choisis la langue de l\'interface.' })), h('div', { class: 'seg' }, ...btns));
 }
 
-function cursorSizeRow() {
-  const opts = [[1, 'Petit'], [2, 'Moyen'], [3, 'Grand']];
-  const cur = () => state.settings.cursorSize || 1;
+// Ligne de réglage à boutons (segmentée) : un seul choix parmi plusieurs, enregistré sous `key`.
+// opts = [[valeur, libellé], …] ; def = valeur par défaut ; after() est appelée après chaque choix.
+function segRow({ id, key, def, label, hint, opts, after }) {
+  const cur = () => (state.settings[key] == null ? def : state.settings[key]);
   const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
-    state.settings.cursorSize = v; sync(); applyCursor(); Sound.play('tick');
-    try { await api.setSettings({ cursorSize: v }); } catch (e) { toast(e.message || String(e), 'error'); }
+    state.settings[key] = v; sync(); if (after) after(v); Sound.play('tick');
+    try { await api.setSettings({ [key]: v }); } catch (e) { toast(e.message || String(e), 'error'); }
   } }));
   const sync = () => btns.forEach((b, i) => b.classList.toggle('on', cur() === opts[i][0]));
   sync();
-  return h('div', { class: 'setting', id: 'row-cursorSize' }, h('div', { class: 'setting-text' }, h('b', { text: 'Taille du curseur' }), h('small', { text: 'Petit, moyen ou grand.' })), h('div', { class: 'seg' }, ...btns));
+  return h('div', { class: 'setting', id }, h('div', { class: 'setting-text' }, h('b', { text: label }), h('small', { text: hint })), h('div', { class: 'seg' }, ...btns));
 }
 
-function cursorStyleRow() {
-  const opts = [[2, 'Clair'], [1, 'Accent']];
-  const cur = () => state.settings.cursorStyle || 2;
-  const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
-    state.settings.cursorStyle = v; sync(); applyCursor(); Sound.play('tick');
-    try { await api.setSettings({ cursorStyle: v }); } catch (e) { toast(e.message || String(e), 'error'); }
-  } }));
-  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', cur() === opts[i][0]));
-  sync();
-  return h('div', { class: 'setting', id: 'row-cursorStyle' }, h('div', { class: 'setting-text' }, h('b', { text: 'Style du curseur' }), h('small', { text: 'Clair : blanc avec un contour de ta couleur. Accent : rempli de ta couleur.' })), h('div', { class: 'seg' }, ...btns));
-}
+const cursorSizeRow = () => segRow({ id: 'row-cursorSize', key: 'cursorSize', def: 1, label: 'Taille du curseur', hint: 'Petit, moyen ou grand.',
+  opts: [[1, 'Petit'], [2, 'Moyen'], [3, 'Grand']], after: () => applyCursor() });
 
-function xmasRow() {
-  const opts = [[1, 'Auto'], [2, 'Toujours'], [0, 'Jamais']];
-  const cur = () => (state.settings.xmasMode == null ? 1 : state.settings.xmasMode);
-  const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
-    state.settings.xmasMode = v; sync(); applyAppearance(); renderAvatar(); Sound.play('tick');
-    try { await api.setSettings({ xmasMode: v }); } catch (e) { toast(e.message || String(e), 'error'); }
-  } }));
-  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', cur() === opts[i][0]));
-  sync();
-  return h('div', { class: 'setting', id: 'row-xmas' }, h('div', { class: 'setting-text' }, h('b', { text: 'Thème de Noël' }), h('small', { text: 'Auto : du 1er décembre au 6 janvier (guirlande, neige, sapin, accent rouge). « Jamais » le désactive.' })), h('div', { class: 'seg' }, ...btns));
-}
+const cursorStyleRow = () => segRow({ id: 'row-cursorStyle', key: 'cursorStyle', def: 2, label: 'Style du curseur', hint: 'Clair : blanc avec un contour de ta couleur. Accent : rempli de ta couleur.',
+  opts: [[2, 'Clair'], [1, 'Accent']], after: () => applyCursor() });
 
-function themeRow() {
-  const opts = [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']];
-  const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
-    state.settings.theme = v; sync(); applyAppearance(); Sound.play('tick'); bump('themeChanges');
-    try { await api.setSettings({ theme: v }); } catch (e) { toast(e.message || String(e), 'error'); }
-  } }));
-  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', (state.settings.theme || 'auto') === opts[i][0]));
-  sync();
-  return h('div', { class: 'setting' }, h('div', { class: 'setting-text' }, h('b', { text: 'Thème' }), h('small', { text: 'Sombre, clair, ou comme Windows (Auto).' })), h('div', { class: 'seg' }, ...btns));
-}
+const xmasRow = () => segRow({ id: 'row-xmas', key: 'xmasMode', def: 1, label: 'Thème de Noël', hint: 'Auto : du 1er décembre au 6 janvier (guirlande, neige, sapin, accent rouge). « Jamais » le désactive.',
+  opts: [[1, 'Auto'], [2, 'Toujours'], [0, 'Jamais']], after: () => { applyAppearance(); renderAvatar(); } });
+
+const themeRow = () => segRow({ id: 'row-theme', key: 'theme', def: 'auto', label: 'Thème', hint: 'Sombre, clair, ou comme Windows (Auto).',
+  opts: [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Auto']], after: () => { applyAppearance(); bump('themeChanges'); } });
+
 function accentRow() {
   const cur = () => (state.settings.accent || '#9c7cf0').toLowerCase();
   const colorInput = h('input', { type: 'color', value: cur() });

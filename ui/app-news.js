@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.12.4', title: 'Nettoyage du code', items: ['Les réglages à boutons (thème, style et taille du curseur, thème de Noël) utilisent maintenant une seule fonction commune. Rien ne change à l\'écran.'] },
   { v: '2.12.3', title: 'Reprendre plus compact', items: ['Section Reprendre : chaque bulle s\'adapte à la taille du nom du jeu au lieu de s\'étirer, fini le grand vide.', 'À l\'ajout d\'un jeu, une pastille « Création icône… » s\'affiche (sur sa carte et dans Reprendre) tant que son icône n\'est pas prête.'] },
   { v: '2.12.2', title: 'Style du curseur', items: ['Deux styles de curseur en pixels : Clair (blanc avec un contour de ta couleur, par défaut) ou Accent (rempli de ta couleur). Paramètres > Apparence > Style du curseur.'] },
   { v: '2.12.1', title: 'Thème auto et Reprendre', items: ['Le thème suit Windows par défaut (Paramètres > Apparence > Thème : Sombre, Clair ou Auto). Ton choix déjà enregistré est conservé.', 'Section Reprendre : le bouton Jouer devient une pastille ronde avec juste le triangle, pour laisser la place au nom du jeu.'] },

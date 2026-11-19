@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.12.4 — Code cleanup
+- The segmented settings (theme, cursor style and size, Christmas theme) now share a single helper. Nothing changes on screen.
+
 ## 2.12.3 — Tighter Resume
 - Resume section: each tile fits its game name instead of stretching, no more empty space.
 - When a game is added, a "Creating icon…" badge shows (on its card and in Resume) until its icon is ready.
