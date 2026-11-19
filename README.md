@@ -121,6 +121,15 @@ The executable is then in `src-tauri/target/release/arcade.exe`. Running it from
 Use the same version number in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `VERSION` in `src-tauri/src/main.rs` and `APP_VERSION` in `ui/app-core.js`.
 Also add an entry to `CHANGELOG.md` and to the `CHANGELOG` list in `ui/app-news.js` (the "What's new" button). The updater compares the version in `src-tauri/Cargo.toml` on `main` with the installed one.
 
+## Code signing policy
+
+Arcade's Windows installer is **not signed yet**. An application to the free [SignPath Foundation](https://signpath.org) open-source program is planned; once accepted, release builds will be signed with this policy:
+
+- **Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).**
+- **Only CI-built artifacts** are signed: `ArcadeSetup.exe` is built from this repository's source by the public GitHub Actions workflow (`.github/workflows/build.yml`) and published on the Releases page.
+- **Team roles**: author, reviewer and approver: [N4ssD](https://github.com/N4ssD) (sole maintainer). Every signing request needs manual approval, and multi-factor authentication is required on the repository and on SignPath.
+- **Privacy**: see the [Privacy](#privacy) section above. Arcade installs and uninstalls cleanly (Windows Settings > Apps > Arcade) and asks before changing anything else on the system.
+
 ## License
 
 [MIT](LICENSE) © N4ssD. Fonts: see [NOTICE.md](NOTICE.md).
