@@ -215,7 +215,7 @@ function renderSettings() {
     h('div', { class: 'set-group' },
       h('h2', { text: 'Système' }),
       switchRow('Réduire Arcade quand un jeu se lance', 'Arcade se cache du bureau (il reste dans la zone de notification, clique sur son icône pour le rouvrir) et la musique se coupe pendant que tu joues.', 'minimizeOnLaunch'),
-      switchRow('Vérifier les mises à jour au démarrage', 'Arcade regarde en arrière-plan s\'il existe une nouvelle version et te le propose.', 'checkUpdates'),
+      switchRow('Vérifier les mises à jour au démarrage', 'Arcade regarde au démarrage s\'il existe une nouvelle version et te demande si tu veux l\'installer (oui ou non). Rien ne s\'installe sans ton accord.', 'checkUpdates'),
       updateRow(),
       switchRow('Lancer Arcade au démarrage de Windows', 'Arcade s\'ouvre tout seul quand tu allumes ton PC.', 'startWithWindows'),
       switchRow('Garder Arcade dans la zone de notification', 'Quand tu fermes la fenêtre, Arcade reste en arrière-plan (icône près de l\'horloge) : clique dessus pour le rouvrir. Avec le démarrage Windows, il démarre alors discrètement.', 'trayMode', (on) => {

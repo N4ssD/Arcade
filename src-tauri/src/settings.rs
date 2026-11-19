@@ -7,7 +7,7 @@ pub(crate) fn default_settings() -> Obj {
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "auto", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
-        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "ecoMode": true, "perfChip": false,
+        "slideshow": false, "minimizeOnLaunch": true, "checkUpdates": true, "updateSkip": "", "ecoMode": true, "perfChip": false,
         "avatarOn": true, "avatarPanel": true, "avatarAuto": true, "avatar": {}, "counters": {}, "achBase": {}
     });
     v.as_object().cloned().unwrap_or_default()
@@ -60,6 +60,13 @@ pub(crate) fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
         "breakReminder" => {
             if let Some(n) = v.as_i64() {
                 settings.insert(k.into(), json!(n.clamp(0, 12)));
+            }
+        }
+        "updateSkip" => {
+            if let Some(s) = v.as_str() {
+                if s.len() <= 20 && s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                    settings.insert(k.into(), json!(s));
+                }
             }
         }
         "theme" => {

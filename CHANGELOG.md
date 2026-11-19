@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.5 — Updates: you decide
+- At startup Arcade checks for a new version and asks Yes or No. Nothing installs without your consent.
+- If you answer No, it is not asked again at startup for that version. You can still run it from Settings > Check for updates.
+
 ## 2.12.4 — Code cleanup
 - The segmented settings (theme, cursor style and size, Christmas theme) now share a single helper. Nothing changes on screen.
 

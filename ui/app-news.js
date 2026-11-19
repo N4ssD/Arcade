@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.12.5', title: 'Mises à jour : tu décides', items: ['Au démarrage, Arcade vérifie s\'il existe une nouvelle version et te demande Oui ou Non. Rien ne s\'installe sans ton accord.', 'Si tu réponds Non, la question n\'est plus reposée au démarrage pour cette version. Tu peux toujours la lancer depuis Paramètres > Rechercher une mise à jour.'] },
   { v: '2.12.4', title: 'Nettoyage du code', items: ['Les réglages à boutons (thème, style et taille du curseur, thème de Noël) utilisent maintenant une seule fonction commune. Rien ne change à l\'écran.'] },
   { v: '2.12.3', title: 'Reprendre plus compact', items: ['Section Reprendre : chaque bulle s\'adapte à la taille du nom du jeu au lieu de s\'étirer, fini le grand vide.', 'À l\'ajout d\'un jeu, une pastille « Création icône… » s\'affiche (sur sa carte et dans Reprendre) tant que son icône n\'est pas prête.'] },
   { v: '2.12.2', title: 'Style du curseur', items: ['Deux styles de curseur en pixels : Clair (blanc avec un contour de ta couleur, par défaut) ou Accent (rempli de ta couleur). Paramètres > Apparence > Style du curseur.'] },

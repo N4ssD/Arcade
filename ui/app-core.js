@@ -3,7 +3,7 @@
 'use strict';
 
 const api = window.arcade;
-const APP_VERSION = '2.12.4';
+const APP_VERSION = '2.12.5';
 
 // Toute erreur du serveur est affichée (plus d'échec silencieux)
 window.addEventListener('unhandledrejection', (e) => {
@@ -187,32 +187,33 @@ function perfPanel() {
 
 // ---------- Mises à jour ----------
 let updating = false;
-function showUpdate(latest) {
+function showUpdate(latest, manual) {
   if (document.getElementById('updbar')) return;
-  const go = h('button', { class: 'btn', text: 'Mettre à jour', 'data-snd': 'none' });
-  const later = h('button', { class: 'btn ghost', text: 'Plus tard', 'data-snd': 'none' });
+  const go = h('button', { class: 'btn', text: 'Oui', 'data-snd': 'none' });
+  const later = h('button', { class: 'btn ghost', text: 'Non', 'data-snd': 'none' });
   const bar = h('div', { id: 'updbar', class: 'updbar' },
-    h('div', { class: 'upd-t' }, h('b', { text: 'Arcade ' + latest + ' est disponible' }), h('small', { text: 'Ta bibliothèque et tes réglages sont conservés.' })),
+    h('div', { class: 'upd-t' }, h('b', { text: 'Arcade ' + latest + ' est disponible' }), h('small', { text: 'Mettre à jour maintenant ? Ta bibliothèque et tes réglages sont conservés.' })),
     h('div', { class: 'upd-b' }, later, go));
-  later.addEventListener('click', () => bar.remove());
+  // « Non » : on ne repose plus la question au démarrage pour cette version (le bouton des paramètres reste disponible)
+  later.addEventListener('click', () => { bar.remove(); state.settings.updateSkip = latest; api.setSettings({ updateSkip: latest }).catch(() => {}); });
   go.addEventListener('click', async () => {
     if (updating) return;
     updating = true; go.disabled = true; later.disabled = true; go.textContent = 'Téléchargement…';
     try { await api.installUpdate(); }
-    catch (e) { updating = false; go.disabled = false; later.disabled = false; go.textContent = 'Mettre à jour'; toast(e.message || String(e), 'error'); }
+    catch (e) { updating = false; go.disabled = false; later.disabled = false; go.textContent = 'Oui'; toast(e.message || String(e), 'error'); }
   });
   document.body.append(bar);
 }
 async function checkUpdate(manual) {
   try {
     const r = await api.checkUpdate();
-    if (r.available) showUpdate(r.latest);
+    if (r.available) { if (manual || state.settings.updateSkip !== r.latest) showUpdate(r.latest, manual); }
     else if (manual) toast('Arcade est à jour (version ' + r.current + ').');
   } catch (e) { if (manual) toast(e.message || String(e), 'error'); }
 }
 function updateRow() {
   return h('div', { class: 'setting' },
-    h('div', { class: 'setting-text' }, h('b', { text: 'Rechercher une mise à jour' }), h('small', { text: 'Version actuelle : ' + APP_VERSION + '. Si une nouvelle version existe, Arcade la télécharge et s\'installe tout seul.' })),
+    h('div', { class: 'setting-text' }, h('b', { text: 'Rechercher une mise à jour' }), h('small', { text: 'Version actuelle : ' + APP_VERSION + '. Si une nouvelle version existe, Arcade te demande si tu veux l\'installer (oui ou non).' })),
     h('button', { class: 'btn ghost', text: 'Rechercher', 'data-snd': 'none', onClick: () => checkUpdate(true) }));
 }
 

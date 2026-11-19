@@ -190,12 +190,12 @@ document.addEventListener('keydown', () => { if (!booted) endSplash(); }, { capt
 api.onChanged(load);
 load().then(() => {
   bump('opens');
+  if (state.settings.checkUpdates !== false) setTimeout(() => checkUpdate(false), 5000);
   const reduce = reducedMotion();
   if (state.settings.introAnim === false || reduce) { splash.classList.add('quick'); endSplash(); return; }
   const n = state.games.length, st = $('#splash-status');
   if (st) st.textContent = n ? n + (n > 1 ? ' jeux prêts' : ' jeu prêt') : 'Bienvenue';
   setTimeout(() => Sound.play('start'), 150);
   setTimeout(endSplash, Math.max(0, 2100 - (performance.now() - bootStart)));
-  if (state.settings.checkUpdates !== false) setTimeout(() => checkUpdate(false), 5000);
   setTimeout(pollPerf, 1500);
 }).catch(() => endSplash());
