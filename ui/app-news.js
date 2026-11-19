@@ -4,6 +4,7 @@
 
 // ---------- Nouveautés (historique des versions) ----------
 const CHANGELOG = [
+  { v: '2.12.0', title: 'Thème de Noël', items: ['Du 1er décembre au 6 janvier, Arcade se met à Noël tout seul : guirlande lumineuse, neige, sapin en pixels, bonnet de Père Noël sur le logo, accent rouge et avatar en tenue de fête.', 'Tu ne veux pas le voir ? Paramètres > Apparence > « Thème de Noël » : Auto, Toujours ou Jamais. La neige et la guirlande s\'arrêtent si tu as désactivé les animations ou les effets.'] },
   { v: '2.11.2', title: 'Taille du curseur', items: ['Le curseur en pixels est plus petit par défaut, et tu peux choisir sa taille : Petit, Moyen ou Grand (Paramètres > Apparence).'] },
   { v: '2.11.1', title: 'Pendant que tu joues', items: ['Au lancement d\'un jeu, la musique se coupe et Arcade se cache du bureau : il reste dans la zone de notification, un clic sur son icône le rouvre.', 'Arcade se rouvre tout seul à la fermeture du jeu et la musique reprend.'] },
   { v: '2.11.0', title: 'Curseur en pixels', items: ['Nouveau : un curseur en pixels (flèche + main au survol des boutons et des jeux) à ta couleur d\'accent. Il ne s\'applique que dans la fenêtre d\'Arcade.', 'Paramètres > Apparence > « Curseur en pixels » pour le désactiver.'] },

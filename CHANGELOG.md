@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.0 — Christmas theme
+- From December 1 to January 6 Arcade dresses up by itself: string lights, snow, a pixel tree, a Santa hat on the logo, a red accent and a festive avatar.
+- Not a fan? Settings > Appearance > "Christmas theme": Auto, Always or Never. Snow and lights stop when animations or visual effects are off.
+
 ## 2.11.2 — Cursor size
 - The pixel cursor is smaller by default and you can pick its size: Small, Medium or Large (Settings > Appearance).
 

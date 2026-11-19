@@ -384,7 +384,7 @@ function applyAppearance() {
   const s = state.settings, root = document.documentElement;
   const mode = s.theme === 'light' ? 'light' : s.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : 'dark';
   root.dataset.theme = mode;
-  const acc = /^#[0-9a-f]{6}$/i.test(s.accent || '') ? s.accent.toLowerCase() : '#9c7cf0';
+  const acc = xmasOn() ? XMAS_RED : /^#[0-9a-f]{6}$/i.test(s.accent || '') ? s.accent.toLowerCase() : '#9c7cf0';
   const [hh, ss, ll] = hexToHsl(acc);
   const sat = Math.max(35, Math.min(95, ss));
   root.style.setProperty('--accent', acc);
@@ -395,6 +395,7 @@ function applyAppearance() {
   root.style.setProperty('--accent-3', `hsl(${hh.toFixed(0)} ${sat.toFixed(0)}% ${l3.toFixed(0)}%)`);
   root.style.setProperty('--on-accent', lum(light ? hslToHex(hh, sat, l2) : acc) > 0.34 ? '#121218' : '#ffffff');
   applyLogo(acc);
+  applyXmas();
   const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = mode === 'light' ? '#f3f2f8' : '#121218';
   document.body.classList.toggle('ambient-off', s.ambient === false);
   document.body.classList.toggle('bgfx-off', s.bgfx === false);

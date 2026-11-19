@@ -15,6 +15,7 @@ const mood = { lastInput: Date.now(), baseline: Date.now(), navCount: 0, happyUn
 function avOutfit() {
   if (state.settings.avatarAuto === false) return null;
   const d = new Date(), m = d.getMonth() + 1, day = d.getDate(), hr = d.getHours();
+  if (xmasOn()) return { name: 'xmas', over: { acc: 'santa', top: 'hoodie', topC: '#c9363f', bottomC: '#2a2a3a' }, say: 'Joyeux Noël ! Un petit jeu près du sapin ?' };
   if ((m === 10 && day >= 25) || (m === 11 && day === 1)) return { name: 'halloween', over: { acc: 'witch', top: 'pumpkin', topC: '#E8663D', bottomC: '#2a1a3a' }, say: 'Joyeux Halloween ! Bonbon ou sort ?' };
   if (hr >= 23 || hr < 6) return { name: 'night', over: { acc: 'nightcap', top: 'pajama', topC: '#3B2F8F', bottom: 'pants', bottomC: '#3B2F8F' }, say: 'Il est tard… une dernière partie avant de dormir ?' };
   if (m === 12 || m <= 2) return { name: 'winter', over: { acc: 'beanie' }, say: 'Il fait froid dehors, reste au chaud avec un jeu !' };

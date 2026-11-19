@@ -1064,3 +1064,18 @@ body.pxcur, body.pxcur * { cursor: var(--cur-arrow) 0 0, default !important; }
 body.pxcur button:not(:disabled), body.pxcur a, body.pxcur summary, body.pxcur label, body.pxcur select, body.pxcur [role="button"], body.pxcur [data-snd]:not([data-snd="none"]),
 body.pxcur .card, body.pxcur .card *, body.pxcur .nav-item, body.pxcur .nav-item *, body.pxcur .switch, body.pxcur .switch *, body.pxcur input[type="checkbox"], body.pxcur input[type="range"], body.pxcur .ach-tab, body.pxcur .av-who, body.pxcur .av-who * { cursor: var(--cur-hand) 4 0, pointer !important; }
 body.pxcur input[type="text"], body.pxcur input[type="search"], body.pxcur input:not([type]), body.pxcur textarea { cursor: text !important; }
+
+/* Thème de Noël (voir app-xmas.js) */
+#xmas { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+#xmas .xm-garland { position: absolute; left: 0; top: 0; }
+#xmas .xm-tree { position: absolute; right: 26px; bottom: 22px; filter: drop-shadow(0 0 12px rgba(255, 209, 102, .25)); }
+#xmas .xm-snow i { position: absolute; top: -10px; background: #fff; animation: xmFall linear infinite; }
+@keyframes xmFall { from { transform: translate(0, -10px); } to { transform: translate(var(--dx, 0), 105vh); } }
+#xmas .xm-b { animation: xmTwinkle 3.2s ease-in-out infinite; }
+@keyframes xmTwinkle { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+body.no-anim #xmas .xm-snow, body.fx-off #xmas .xm-snow { display: none; }
+body.no-anim #xmas .xm-b, body.fx-off #xmas .xm-b { animation: none; }
+@media (prefers-reduced-motion: reduce) { #xmas .xm-snow { display: none; } #xmas .xm-b { animation: none; } }
+body.tv #xmas .xm-tree { display: none; }
+.brand-btn { position: relative; }
+#xm-hat { position: absolute; left: -6px; top: -10px; width: 36px; height: 18px; transform: rotate(-14deg); pointer-events: none; z-index: 2; }
