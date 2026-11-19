@@ -3,7 +3,7 @@ use super::*;
 
 pub(crate) fn default_settings() -> Obj {
     let v = json!({
-        "cardSize": 200, "volume": 30, "volumeV": 0, "music": true, "musicVol": 20, "cursor": true, "cursorSize": 1, "xmasMode": 1, "sounds": true, "hoverSounds": true, "clickSounds": true,
+        "cardSize": 200, "volume": 30, "volumeV": 0, "music": true, "musicVol": 20, "cursor": true, "cursorSize": 1, "cursorStyle": 2, "xmasMode": 1, "sounds": true, "hoverSounds": true, "clickSounds": true,
         "autoCovers": true, "sidebarCollapsed": false, "introAnim": true, "trayMode": false,
         "breakReminder": 0, "theme": "auto", "accent": "#9C7CF0", "accentV": 2, "logo": "",
         "bgfx": true, "animations": true, "effects": true, "achievements": {}, "ambient": true,
@@ -35,6 +35,11 @@ pub(crate) fn apply_setting(settings: &mut Obj, k: &str, v: &Value) {
         "xmasMode" => {
             if let Some(n) = v.as_i64() {
                 settings.insert(k.into(), json!(n.clamp(0, 2)));
+            }
+        }
+        "cursorStyle" => {
+            if let Some(n) = v.as_i64() {
+                settings.insert(k.into(), json!(n.clamp(1, 2)));
             }
         }
         "cursorSize" => {

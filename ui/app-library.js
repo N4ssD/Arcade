@@ -330,10 +330,10 @@ const CUR_ARROW = ['X...........', 'XX..........', 'XOX.........', 'XOOX........
 const CUR_HAND = ['....XX........', '...XOOX.......', '...XOOX.......', '...XOOX.......', '...XOOXXX.....', '...XOOXOOXX...', 'XX.XOOXOOXOOX.', 'XOXXOOOOOOOOOX', 'XOOXOOOOOOOOOX', '.XOOOOOOOOOOOX', '.XOOOOOOOOOOOX', '..XOOOOOOOOOX.', '..XOOOOOOOOOX.', '...XOOOOOOOX..', '...XOOOOOOOX..', '...XXXXXXXXX..'];
 let curColor = '#9c7cf0';
 const CUR_PX = { 1: 1, 2: 1.5, 3: 2 }; // Petit / Moyen / Grand
-function curUrl(bm, fill) {
+function curUrl(bm, fill, outline) {
   const px = CUR_PX[state.settings.cursorSize] || 1, w = bm[0].length * px, h = bm.length * px;
   let r = '';
-  bm.forEach((row, y) => [...row].forEach((c, x) => { if (c !== '.') r += `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${c === 'X' ? '#121218' : fill}"/>`; }));
+  bm.forEach((row, y) => [...row].forEach((c, x) => { if (c !== '.') r += `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${c === 'X' ? outline : fill}"/>`; }));
   return 'url("data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" shape-rendering="crispEdges">${r}</svg>`) + '")';
 }
 function applyCursor(color) {
@@ -341,8 +341,10 @@ function applyCursor(color) {
   const on = state.settings.cursor !== false, root = document.documentElement;
   document.body.classList.toggle('pxcur', on);
   if (!on) return;
-  root.style.setProperty('--cur-arrow', curUrl(CUR_ARROW, curColor));
-  root.style.setProperty('--cur-hand', curUrl(CUR_HAND, curColor));
+  // style 1 = rempli de la couleur d'accent (contour sombre) ; style 2 (défaut) = blanc avec contour d'accent
+  const bright = (state.settings.cursorStyle || 2) === 2, fill = bright ? '#ececf1' : curColor, outline = bright ? curColor : '#121218';
+  root.style.setProperty('--cur-arrow', curUrl(CUR_ARROW, fill, outline));
+  root.style.setProperty('--cur-hand', curUrl(CUR_HAND, fill, outline));
 }
 let lastLogoKey = '';
 function applyLogo(acc) {

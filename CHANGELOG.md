@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.12.2 — Cursor style
+- Two pixel cursor styles: Light (white with an outline in your color, default) or Accent (filled with your color). Settings > Appearance > Cursor style.
+
 ## 2.12.1 — Auto theme and Resume
 - The theme follows Windows by default (Settings > Appearance > Theme: Dark, Light or Auto). An already saved choice is kept.
 - Resume section: the Play button is now a small round button with just the triangle, leaving room for the game name.

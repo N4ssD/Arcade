@@ -49,6 +49,18 @@ function cursorSizeRow() {
   return h('div', { class: 'setting', id: 'row-cursorSize' }, h('div', { class: 'setting-text' }, h('b', { text: 'Taille du curseur' }), h('small', { text: 'Petit, moyen ou grand.' })), h('div', { class: 'seg' }, ...btns));
 }
 
+function cursorStyleRow() {
+  const opts = [[2, 'Clair'], [1, 'Accent']];
+  const cur = () => state.settings.cursorStyle || 2;
+  const btns = opts.map(([v, t]) => h('button', { type: 'button', class: 'seg-b', 'data-snd': 'none', text: t, onClick: async () => {
+    state.settings.cursorStyle = v; sync(); applyCursor(); Sound.play('tick');
+    try { await api.setSettings({ cursorStyle: v }); } catch (e) { toast(e.message || String(e), 'error'); }
+  } }));
+  const sync = () => btns.forEach((b, i) => b.classList.toggle('on', cur() === opts[i][0]));
+  sync();
+  return h('div', { class: 'setting', id: 'row-cursorStyle' }, h('div', { class: 'setting-text' }, h('b', { text: 'Style du curseur' }), h('small', { text: 'Clair : blanc avec un contour de ta couleur. Accent : rempli de ta couleur.' })), h('div', { class: 'seg' }, ...btns));
+}
+
 function xmasRow() {
   const opts = [[1, 'Auto'], [2, 'Toujours'], [0, 'Jamais']];
   const cur = () => (state.settings.xmasMode == null ? 1 : state.settings.xmasMode);
@@ -198,7 +210,8 @@ function renderSettings() {
     ),
     h('div', { class: 'set-group' },
       h('h2', { text: 'Apparence' }),
-      switchRow('Curseur en pixels', 'Remplace la flèche de la souris par un curseur pixel à ta couleur d\'accent, dans la fenêtre d\'Arcade seulement.', 'cursor', (on) => { applyCursor(); const r = $('#row-cursorSize'); if (r) r.classList.toggle('disabled', !on); }),
+      switchRow('Curseur en pixels', 'Remplace la flèche de la souris par un curseur pixel à ta couleur d\'accent, dans la fenêtre d\'Arcade seulement.', 'cursor', (on) => { applyCursor(); for (const id of ['#row-cursorSize', '#row-cursorStyle']) { const r = $(id); if (r) r.classList.toggle('disabled', !on); } }),
+      cursorStyleRow(),
       cursorSizeRow(),
       xmasRow(),
       langRow(),
