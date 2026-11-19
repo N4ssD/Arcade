@@ -279,6 +279,7 @@ function card(g) {
     favBtn, moreBtn, playBtn,
     isRunning ? h('span', { class: 'badge' }, h('i'), 'En cours')
       : state.fetching.has(g.id) ? h('span', { class: 'badge info' }, h('i'), 'Couverture…')
+      : g.iconPending ? h('span', { class: 'badge info' }, h('i'), 'Création icône…')
       : (!g.exists ? h('span', { class: 'badge warn', text: 'Introuvable' }) : g.finished ? h('span', { class: 'badge done' }, icon('check'), 'Terminé') : null)
   );
 

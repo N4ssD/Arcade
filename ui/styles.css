@@ -1083,3 +1083,7 @@ body.tv #xmas .xm-tree { display: none; }
 /* « Reprendre » : bouton Jouer compact (icône seule) pour laisser la place au nom du jeu */
 .rs-play { display: grid; place-items: center; width: clamp(30px, calc(var(--card-w, 200px) * .17), 42px); height: clamp(30px, calc(var(--card-w, 200px) * .17), 42px); padding: 0; border-radius: 50%; }
 .rs-play svg { width: 56%; height: 56%; margin-left: 8%; }
+
+/* « Reprendre » : chaque bulle s'adapte à la taille de son contenu au lieu de s'étirer sur toute la largeur */
+.rs-row { display: flex; flex-wrap: wrap; gap: 14px; }
+.rs-tile { flex: 0 1 auto; width: fit-content; min-width: min(100%, 230px); max-width: min(100%, 380px); }

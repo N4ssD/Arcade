@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.3 — Tighter Resume
+- Resume section: each tile fits its game name instead of stretching, no more empty space.
+- When a game is added, a "Creating icon…" badge shows (on its card and in Resume) until its icon is ready.
+
 ## 2.12.2 — Cursor style
 - Two pixel cursor styles: Light (white with an outline in your color, default) or Accent (filled with your color). Settings > Appearance > Cursor style.
 

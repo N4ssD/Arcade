@@ -187,6 +187,7 @@
     'Taille du curseur': 'Cursor size', 'Petit, moyen ou grand.': 'Small, medium or large.', 'Petit': 'Small', 'Moyen': 'Medium', 'Grand': 'Large',
     'Thème de Noël': 'Christmas theme', 'Auto : du 1er décembre au 6 janvier (guirlande, neige, sapin, accent rouge). « Jamais » le désactive.': 'Auto: from December 1 to January 6 (garland, snow, tree, red accent). "Never" turns it off.', 'Auto': 'Auto', 'Toujours': 'Always', 'Jamais': 'Never', 'Joyeux Noël ! Un petit jeu près du sapin ?': 'Merry Christmas! A quick game by the tree?',
     'Style du curseur': 'Cursor style', 'Clair : blanc avec un contour de ta couleur. Accent : rempli de ta couleur.': 'Light: white with an outline in your color. Accent: filled with your color.', 'Clair': 'Light', 'Accent': 'Accent',
+    'Création icône…': 'Creating icon…', 'Création de l\'icône…': 'Creating the icon…',
     'Sons au survol': 'Hover sounds', 'Un léger tic quand la souris passe sur un jeu.': 'A light tick when the mouse moves over a game.',
     'Règle le volume des sons du lanceur.': 'Sets the volume of the launcher sounds.', 'Jouer un son': 'Play a sound',
     'Performance': 'Performance', 'Animations': 'Animations', 'Désactive les transitions et animations (survols, ouvertures, clics, défilements). Idéal sur un PC modeste.': 'Turns off transitions and animations (hovers, openings, clicks, scrolling). Ideal on a modest PC.',

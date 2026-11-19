@@ -134,6 +134,11 @@ pub(crate) fn public_game(dir: &Path, g: &Obj) -> Value {
     o.insert("iconUrl".into(), media("icon", "icons", "icon"));
     o.insert("coverUrl".into(), media("cover", "covers", "cover"));
     o.insert("exists".into(), json!(exists));
+    // L'icône du jeu est en cours de création (extraction en arrière-plan) : l'interface affiche une pastille d'attente
+    let id = g.get("id").and_then(|x| x.as_str()).unwrap_or("");
+    let no_icon = g.get("icon").map(|x| x.is_null()).unwrap_or(true);
+    let pending = no_icon && exists && !is_uri(target) && ICON_BUSY.load(Ordering::Relaxed) && !ICON_SESSION.lock().map(|s| s.iter().any(|x| x == id)).unwrap_or(true);
+    o.insert("iconPending".into(), json!(pending));
     Value::Object(o)
 }
 

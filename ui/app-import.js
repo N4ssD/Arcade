@@ -9,7 +9,7 @@ function resumeTile(g) {
   const thumb = h('div', { class: 'rs-thumb' + (useIcon ? ' iconcover' : ''), style: useIcon ? { '--ico': `url("${g.iconUrl}")` } : coverBackground(g) },
     useIcon ? h('img', { class: 'gicon', src: g.iconUrl, alt: '', draggable: 'false' })
       : g.coverUrl ? null : h('span', { class: 'letter', text: g.name.trim().charAt(0).toUpperCase() || '?' }));
-  const meta = running ? 'En cours' : [fmtLast(g.lastPlayed), g.playtime ? fmtPlaytime(g.playtime) : ''].filter(Boolean).join(' · ');
+  const meta = running ? 'En cours' : g.iconPending ? 'Création de l\'icône…' : [fmtLast(g.lastPlayed), g.playtime ? fmtPlaytime(g.playtime) : ''].filter(Boolean).join(' · ');
   return h('article', {
     class: 'rs-tile' + (running ? ' running' : ''), tabindex: '0', 'data-id': g.id,
     onClick: () => openDetail(g.id),
